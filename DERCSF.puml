@@ -1,0 +1,107 @@
+@startuml
+' Configuración visual opcional
+hide circle
+skinparam linetype ortho
+
+' =========================
+' ENTIDADES
+' =========================
+
+entity Cliente {
+    +id_cliente : int <<PK>>
+    nombre : varchar
+    telefono : varchar
+    email : varchar
+}
+
+entity Empleado {
+    +id_empleado : int <<PK>>
+    nombre : varchar
+    especialidad : varchar
+    salario : decimal
+}
+
+entity Servicio {
+    +id_servicio : int <<PK>>
+    nombre : varchar
+    precio : decimal
+}
+
+entity Producto {
+    +id_producto : int <<PK>>
+    nombre : varchar
+    precio : decimal
+    stock : int
+    id_categoria : int <<FK>>
+    id_proveedor : int <<FK>>
+}
+
+entity Categoria {
+    +id_categoria : int <<PK>>
+    nombre : varchar
+}
+
+entity Proveedor {
+    +id_proveedor : int <<PK>>
+    nombre : varchar
+    contacto : varchar
+}
+
+entity Venta {
+    +id_venta : int <<PK>>
+    fecha : date
+    total : decimal
+    id_cliente : int <<FK>>
+    id_empleado : int <<FK>>
+    id_reserva : int <<FK>>  ' opcional
+}
+
+entity DetalleVentaProducto {
+    +id_detalle_producto : int <<PK>>
+    id_venta : int <<FK>>
+    id_producto : int <<FK>>
+    cantidad : int
+    precio_unitario : decimal
+}
+
+entity DetalleVentaServicio {
+    +id_detalle_servicio : int <<PK>>
+    id_venta : int <<FK>>
+    id_servicio : int <<FK>>
+    cantidad : int
+    precio_unitario : decimal
+}
+
+entity Reserva {
+    +id_reserva : int <<PK>>
+    fecha : date
+    hora : time
+    estado : varchar
+    id_cliente : int <<FK>>
+    id_empleado : int <<FK>>
+    id_servicio : int <<FK>>
+}
+
+' =========================
+' RELACIONES (Patas de gallo)
+' =========================
+
+Cliente ||--o{ Venta : realiza
+Empleado ||--o{ Venta : atiende
+
+Venta ||--o{ DetalleVentaProducto : incluye
+Producto ||--o{ DetalleVentaProducto : contiene
+
+Venta ||--o{ DetalleVentaServicio : incluye
+Servicio ||--o{ DetalleVentaServicio : contiene
+
+Categoria ||--o{ Producto : clasifica
+Proveedor ||--o{ Producto : suministra
+
+Cliente ||--o{ Reserva : agenda
+Empleado ||--o{ Reserva : atiende
+Servicio ||--o{ Reserva : reservado
+
+Reserva ||--o| Venta : genera
+
+@enduml
