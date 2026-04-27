@@ -164,20 +164,18 @@ CREATE INDEX idx_user_email ON "User"(email);
 -- =========================
 -- VIEWS (Soft Delete Handling)
 -- =========================
-CREATE TABLE Sale (
-    id_sale SERIAL PRIMARY KEY,
-    date DATE NOT NULL,
-    total DECIMAL(10,2),
 
-    id_user INT NOT NULL,
-    id_employee INT NOT NULL,
-    id_reservation INT,
+CREATE VIEW active_users AS
+SELECT *
+FROM "User"
+WHERE deleted_at IS NULL;
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP,
+CREATE VIEW active_sales AS
+SELECT *
+FROM Sale
+WHERE deleted_at IS NULL;
 
-    FOREIGN KEY (id_user) REFERENCES "User"(id_user),
-    FOREIGN KEY (id_employee) REFERENCES Employee(id_employee),
-    FOREIGN KEY (id_reservation) REFERENCES Reservation(id_reservation)
-);
+CREATE VIEW active_reservations AS
+SELECT *
+FROM Reservation
+WHERE deleted_at IS NULL;

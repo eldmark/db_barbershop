@@ -1,33 +1,15 @@
-# backend
+# Elysia with Bun runtime
 
-## Setup
+## Getting Started
+To get started with this template, simply paste this command into your terminal:
+```bash
+bun create elysia ./elysia-example
+```
 
-1. Go to project folder
+## Development
+To start the development server run:
+```bash
+bun run dev
+```
 
-> cd backend
-
-2. Install Dependencies
-
-> npm run setup
-
-3. Create .env with following content
-
-````
-DB_HOST=
-DB_DATABASE=
-DB_USER=
-DB_PASSWORD=
-
-PORT=3000
-SECRET=AAA
-````
-
-## Run
-
-1. Start Server
-
-> npm start
-
-2. Open in url or using an Endpoint tester (postman)
-
-> http://127.0.0.1:3000/
+Open http://localhost:3000/ with your browser to see the result.
