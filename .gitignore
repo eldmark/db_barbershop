@@ -1,2 +1,4 @@
 *.pdf
 agents.md
+docker-compose.yml
+.env
