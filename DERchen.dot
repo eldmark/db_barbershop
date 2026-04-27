@@ -3,158 +3,103 @@ digraph BarberiaER {
     node [fontname="Helvetica"];
 
     // ENTIDADES
-    Cliente [shape=box];
-    Empleado [shape=box];
-    Servicio [shape=box];
-    Producto [shape=box];
-    Categoria [shape=box];
-    Proveedor [shape=box];
-    Venta [shape=box];
-    DetalleVentaProducto [shape=box];
-    DetalleVentaServicio [shape=box];
-    Reserva [shape=box];
+    User [shape=box];
+    Role [shape=box];
+    Permission [shape=box];
+    Employee [shape=box];
+    Category [shape=box];
+    Supplier [shape=box];
+    Service [shape=box];
+    Product [shape=box];
+    Reservation [shape=box];
+    Sale [shape=box];
+    SaleDetailProduct [shape=box];
+    SaleDetailService [shape=box];
 
     // RELACIONES
-    Realiza [shape=diamond, label="realiza"];
-    AtiendeVenta [shape=diamond, label="atiende"];
-    IncluyeProducto [shape=diamond, label="incluye_producto"];
-    IncluyeServicio [shape=diamond, label="incluye_servicio"];
-    Pertenece [shape=diamond, label="pertenece"];
-    Suministra [shape=diamond, label="suministra"];
-    Agenda [shape=diamond, label="agenda"];
-    AtiendeReserva [shape=diamond, label="atiende"];
-    ReservadoEn [shape=diamond, label="reservado_en"];
-    Genera [shape=diamond, label="genera"];
+    HasRole [shape=diamond, label="has_role"];
+    HasPermission [shape=diamond, label="has_permission"];
+    Performs [shape=diamond, label="performs"];
+    Schedules [shape=diamond, label="schedules"];
+    AttendsSale [shape=diamond, label="attends"];
+    AttendsReservation [shape=diamond, label="attends"];
+    IncludesProduct [shape=diamond, label="includes"];
+    IncludesService [shape=diamond, label="includes"];
+    Classifies [shape=diamond, label="classifies"];
+    Supplies [shape=diamond, label="supplies"];
+    Books [shape=diamond, label="books"];
+    Generates [shape=diamond, label="generates"];
 
-    // ATRIBUTOS CLIENTE
-    c_id [shape=ellipse, label="id_cliente"];
-    c_nombre [shape=ellipse, label="nombre"];
-    c_tel [shape=ellipse, label="telefono"];
-    c_email [shape=ellipse, label="email"];
+    // ATRIBUTOS USER
+    u_id [shape=ellipse, label="id_user"];
+    u_name [shape=ellipse, label="name"];
+    u_email [shape=ellipse, label="email"];
+    u_password [shape=ellipse, label="password"];
+    u_created [shape=ellipse, label="created_at"];
+    u_updated [shape=ellipse, label="updated_at"];
+    u_deleted [shape=ellipse, label="deleted_at"];
 
-    Cliente -> c_id;
-    Cliente -> c_nombre;
-    Cliente -> c_tel;
-    Cliente -> c_email;
+    User -> u_id;
+    User -> u_name;
+    User -> u_email;
+    User -> u_password;
+    User -> u_created;
+    User -> u_updated;
+    User -> u_deleted;
 
-    // ATRIBUTOS EMPLEADO
-    e_id [shape=ellipse, label="id_empleado"];
-    e_nombre [shape=ellipse, label="nombre"];
-    e_especialidad [shape=ellipse, label="especialidad"];
-    e_salario [shape=ellipse, label="salario"];
+    // ATRIBUTOS ROLE
+    r_id [shape=ellipse, label="id_role"];
+    r_name [shape=ellipse, label="name"];
 
-    Empleado -> e_id;
-    Empleado -> e_nombre;
-    Empleado -> e_especialidad;
-    Empleado -> e_salario;
+    Role -> r_id;
+    Role -> r_name;
 
-    // ATRIBUTOS SERVICIO
-    s_id [shape=ellipse, label="id_servicio"];
-    s_nombre [shape=ellipse, label="nombre"];
-    s_precio [shape=ellipse, label="precio"];
+    // ATRIBUTOS PERMISSION
+    p_id [shape=ellipse, label="id_permission"];
+    p_name [shape=ellipse, label="name"];
 
-    Servicio -> s_id;
-    Servicio -> s_nombre;
-    Servicio -> s_precio;
+    Permission -> p_id;
+    Permission -> p_name;
 
-    // ATRIBUTOS PRODUCTO
-    p_id [shape=ellipse, label="id_producto"];
-    p_nombre [shape=ellipse, label="nombre"];
-    p_precio [shape=ellipse, label="precio"];
-    p_stock [shape=ellipse, label="stock"];
+    // RELACIONES RBAC
+    User -> HasRole [label="N"];
+    HasRole -> Role [label="N"];
 
-    Producto -> p_id;
-    Producto -> p_nombre;
-    Producto -> p_precio;
-    Producto -> p_stock;
-
-    // ATRIBUTOS CATEGORIA
-    cat_id [shape=ellipse, label="id_categoria"];
-    cat_nombre [shape=ellipse, label="nombre"];
-
-    Categoria -> cat_id;
-    Categoria -> cat_nombre;
-
-    // ATRIBUTOS PROVEEDOR
-    prov_id [shape=ellipse, label="id_proveedor"];
-    prov_nombre [shape=ellipse, label="nombre"];
-    prov_contacto [shape=ellipse, label="contacto"];
-
-    Proveedor -> prov_id;
-    Proveedor -> prov_nombre;
-    Proveedor -> prov_contacto;
-
-    // ATRIBUTOS VENTA
-    v_id [shape=ellipse, label="id_venta"];
-    v_fecha [shape=ellipse, label="fecha"];
-    v_total [shape=ellipse, label="total"];
-
-    Venta -> v_id;
-    Venta -> v_fecha;
-    Venta -> v_total;
-
-    // ATRIBUTOS DETALLE VENTA PRODUCTO
-    dpp_id [shape=ellipse, label="id_detalle_producto"];
-    dpp_cantidad [shape=ellipse, label="cantidad"];
-    dpp_precio [shape=ellipse, label="precio_unitario"];
-
-    DetalleVentaProducto -> dpp_id;
-    DetalleVentaProducto -> dpp_cantidad;
-    DetalleVentaProducto -> dpp_precio;
-
-    // ATRIBUTOS DETALLE VENTA SERVICIO
-    dps_id [shape=ellipse, label="id_detalle_servicio"];
-    dps_cantidad [shape=ellipse, label="cantidad"];
-    dps_precio [shape=ellipse, label="precio_unitario"];
-
-    DetalleVentaServicio -> dps_id;
-    DetalleVentaServicio -> dps_cantidad;
-    DetalleVentaServicio -> dps_precio;
-
-    // ATRIBUTOS RESERVA
-    r_id [shape=ellipse, label="id_reserva"];
-    r_fecha [shape=ellipse, label="fecha"];
-    r_hora [shape=ellipse, label="hora"];
-    r_estado [shape=ellipse, label="estado"];
-
-    Reserva -> r_id;
-    Reserva -> r_fecha;
-    Reserva -> r_hora;
-    Reserva -> r_estado;
+    Role -> HasPermission [label="N"];
+    HasPermission -> Permission [label="N"];
 
     // RELACIONES PRINCIPALES
+    User -> Performs [label="1"];
+    Performs -> Sale [label="N"];
 
-    Cliente -> Realiza [label="1"];
-    Realiza -> Venta [label="N"];
+    User -> Schedules [label="1"];
+    Schedules -> Reservation [label="N"];
 
-    Empleado -> AtiendeVenta [label="1"];
-    AtiendeVenta -> Venta [label="N"];
+    Employee -> AttendsSale [label="1"];
+    AttendsSale -> Sale [label="N"];
 
-    Venta -> IncluyeProducto [label="1"];
-    IncluyeProducto -> DetalleVentaProducto [label="N"];
+    Employee -> AttendsReservation [label="1"];
+    AttendsReservation -> Reservation [label="N"];
 
-    Producto -> IncluyeProducto [label="1"];
+    Product -> Classifies [label="N"];
+    Classifies -> Category [label="1"];
 
-    Venta -> IncluyeServicio [label="1"];
-    IncluyeServicio -> DetalleVentaServicio [label="N"];
+    Product -> Supplies [label="N"];
+    Supplies -> Supplier [label="1"];
 
-    Servicio -> IncluyeServicio [label="1"];
+    Sale -> IncludesProduct [label="1"];
+    IncludesProduct -> SaleDetailProduct [label="N"];
 
-    Producto -> Pertenece [label="N"];
-    Pertenece -> Categoria [label="1"];
+    Product -> IncludesProduct [label="1"];
 
-    Producto -> Suministra [label="N"];
-    Suministra -> Proveedor [label="1"];
+    Sale -> IncludesService [label="1"];
+    IncludesService -> SaleDetailService [label="N"];
 
-    Cliente -> Agenda [label="1"];
-    Agenda -> Reserva [label="N"];
+    Service -> IncludesService [label="1"];
 
-    Empleado -> AtiendeReserva [label="1"];
-    AtiendeReserva -> Reserva [label="N"];
+    Service -> Books [label="1"];
+    Books -> Reservation [label="N"];
 
-    Servicio -> ReservadoEn [label="1"];
-    ReservadoEn -> Reserva [label="N"];
-
-    Reserva -> Genera [label="0..1"];
-    Genera -> Venta [label="1"];
+    Reservation -> Generates [label="0..1"];
+    Generates -> Sale [label="1"];
 }

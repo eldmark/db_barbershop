@@ -1,5 +1,4 @@
 @startuml
-' Configuración visual opcional
 hide circle
 skinparam linetype ortho
 
@@ -7,101 +6,137 @@ skinparam linetype ortho
 ' ENTIDADES
 ' =========================
 
-entity Cliente {
-    +id_cliente : int <<PK>>
-    nombre : varchar
-    telefono : varchar
+entity User {
+    +id_user : int <<PK>>
+    name : varchar
     email : varchar
+    password : varchar
+    created_at : timestamp
+    updated_at : timestamp
+    deleted_at : timestamp
 }
 
-entity Empleado {
-    +id_empleado : int <<PK>>
-    nombre : varchar
-    especialidad : varchar
-    salario : decimal
+entity Role {
+    +id_role : int <<PK>>
+    name : varchar
 }
 
-entity Servicio {
-    +id_servicio : int <<PK>>
-    nombre : varchar
-    precio : decimal
+entity Permission {
+    +id_permission : int <<PK>>
+    name : varchar
 }
 
-entity Producto {
-    +id_producto : int <<PK>>
-    nombre : varchar
-    precio : decimal
+entity UserRole {
+    +id_user : int <<FK>>
+    +id_role : int <<FK>>
+}
+
+entity RolePermission {
+    +id_role : int <<FK>>
+    +id_permission : int <<FK>>
+}
+
+entity Employee {
+    +id_employee : int <<PK>>
+    name : varchar
+    specialty : varchar
+    salary : decimal
+}
+
+entity Category {
+    +id_category : int <<PK>>
+    name : varchar
+}
+
+entity Supplier {
+    +id_supplier : int <<PK>>
+    name : varchar
+    contact : varchar
+}
+
+entity Service {
+    +id_service : int <<PK>>
+    name : varchar
+    price : decimal
+}
+
+entity Product {
+    +id_product : int <<PK>>
+    name : varchar
+    price : decimal
     stock : int
-    id_categoria : int <<FK>>
-    id_proveedor : int <<FK>>
+    id_category : int <<FK>>
+    id_supplier : int <<FK>>
 }
 
-entity Categoria {
-    +id_categoria : int <<PK>>
-    nombre : varchar
+entity Reservation {
+    +id_reservation : int <<PK>>
+    date : date
+    time : time
+    status : varchar
+    created_at : timestamp
+    updated_at : timestamp
+    deleted_at : timestamp
+    id_user : int <<FK>>
+    id_employee : int <<FK>>
+    id_service : int <<FK>>
 }
 
-entity Proveedor {
-    +id_proveedor : int <<PK>>
-    nombre : varchar
-    contacto : varchar
-}
-
-entity Venta {
-    +id_venta : int <<PK>>
-    fecha : date
+entity Sale {
+    +id_sale : int <<PK>>
+    date : date
     total : decimal
-    id_cliente : int <<FK>>
-    id_empleado : int <<FK>>
-    id_reserva : int <<FK>>  ' opcional
+    created_at : timestamp
+    updated_at : timestamp
+    deleted_at : timestamp
+    id_user : int <<FK>>
+    id_employee : int <<FK>>
+    id_reservation : int <<FK>>
 }
 
-entity DetalleVentaProducto {
-    +id_detalle_producto : int <<PK>>
-    id_venta : int <<FK>>
-    id_producto : int <<FK>>
-    cantidad : int
-    precio_unitario : decimal
+entity SaleDetailProduct {
+    +id_sale_detail_product : int <<PK>>
+    id_sale : int <<FK>>
+    id_product : int <<FK>>
+    quantity : int
+    unit_price : decimal
 }
 
-entity DetalleVentaServicio {
-    +id_detalle_servicio : int <<PK>>
-    id_venta : int <<FK>>
-    id_servicio : int <<FK>>
-    cantidad : int
-    precio_unitario : decimal
-}
-
-entity Reserva {
-    +id_reserva : int <<PK>>
-    fecha : date
-    hora : time
-    estado : varchar
-    id_cliente : int <<FK>>
-    id_empleado : int <<FK>>
-    id_servicio : int <<FK>>
+entity SaleDetailService {
+    +id_sale_detail_service : int <<PK>>
+    id_sale : int <<FK>>
+    id_service : int <<FK>>
+    quantity : int
+    unit_price : decimal
 }
 
 ' =========================
-' RELACIONES (Patas de gallo)
+' RELACIONES
 ' =========================
 
-Cliente ||--o{ Venta : realiza
-Empleado ||--o{ Venta : atiende
+User ||--o{ UserRole
+Role ||--o{ UserRole
 
-Venta ||--o{ DetalleVentaProducto : incluye
-Producto ||--o{ DetalleVentaProducto : contiene
+Role ||--o{ RolePermission
+Permission ||--o{ RolePermission
 
-Venta ||--o{ DetalleVentaServicio : incluye
-Servicio ||--o{ DetalleVentaServicio : contiene
+User ||--o{ Sale : performs
+User ||--o{ Reservation : schedules
 
-Categoria ||--o{ Producto : clasifica
-Proveedor ||--o{ Producto : suministra
+Employee ||--o{ Sale : attends
+Employee ||--o{ Reservation : attends
 
-Cliente ||--o{ Reserva : agenda
-Empleado ||--o{ Reserva : atiende
-Servicio ||--o{ Reserva : reservado
+Category ||--o{ Product : classifies
+Supplier ||--o{ Product : supplies
 
-Reserva ||--o| Venta : genera
+Sale ||--o{ SaleDetailProduct
+Product ||--o{ SaleDetailProduct
+
+Sale ||--o{ SaleDetailService
+Service ||--o{ SaleDetailService
+
+Service ||--o{ Reservation : booked
+
+Reservation ||--o| Sale : generates
 
 @enduml
