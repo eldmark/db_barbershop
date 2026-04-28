@@ -2,3 +2,7 @@
 agents.md
 docker-compose.yml
 .env
+
+# dependencies
+/node_modules
+**/node_modules
