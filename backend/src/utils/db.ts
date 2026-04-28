@@ -1,5 +1,7 @@
 import { pool } from "../config/db";
 
+// PARAMETRIZACIÓN DE QUERIES PARA HACERLAS SEGURAS 
+
 export const query = async (text: string, params?: any[]) => {
   try {
     const res = await pool.query(text, params);
