@@ -1,5 +1,5 @@
 import { query } from "../../utils/db";
-// CRUD DE USER
+
 export const getUsers = async () => {
   return await query(
     `SELECT id_user, name, email 
@@ -32,5 +32,14 @@ export const deleteUser = async (id: number) => {
      SET deleted_at = NOW()
      WHERE id_user = $1`,
     [id]
+  );
+};
+export const updateUser = async (id: number, name: string, email: string) => {
+  return await query(
+    `UPDATE "User"
+      SET name = $1, email = $2
+      WHERE id_user = $3 AND deleted_at IS NULL
+      RETURNING id_user, name, email`,
+    [name, email, id]
   );
 };

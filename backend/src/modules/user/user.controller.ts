@@ -16,3 +16,8 @@ export const getUserById = async (params: any) => {
 export const deleteUser = async (params: any) => {
   return await service.deleteUser(Number(params.id));
 };
+
+export const updateUser = async (params: any, body: any) => {
+  const { name, email } = body;
+  return await service.updateUser(Number(params.id), name, email);
+};
