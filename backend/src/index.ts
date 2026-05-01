@@ -11,6 +11,8 @@ import { registerRoleRoutes } from "./modules/role/role.routes";
 import { registerPermissionRoutes } from "./modules/permission/permission.routes";
 import { registerSaleDetailProductRoutes } from "./modules/saleDetailProduct/saleDetailProduct.routes";
 import { registerSaleDetailServiceRoutes } from "./modules/saleDetailService/saleDetailService.routes";
+import { registerAuthRoutes } from "./modules/auth/auth.routes";
+import { pool } from "./config/db";
 
 const app = new Elysia();
 
@@ -26,9 +28,20 @@ registerRoleRoutes(app);
 registerPermissionRoutes(app);
 registerSaleDetailProductRoutes(app);
 registerSaleDetailServiceRoutes(app);
+registerAuthRoutes(app);
 
-app.get("/", () => "Hello Elysia");
+app.get("/", () => "Server is running");
+
+app.get("/health", async () => {
+	const server = { status: "ok" };
+	try {
+		await pool.query("SELECT 1");
+		return { server, db: { status: "ok" } };
+	} catch (err) {
+		return { server, db: { status: "down", error: String(err) } };
+	}
+});
 
 const server = app.listen(3000);
 
-console.log(`🦊 Elysia is running at ${server.server?.hostname}:${server.server?.port}`);
+console.log(` Server is running at ${server.server?.hostname}:${server.server?.port}`);

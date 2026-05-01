@@ -6,7 +6,9 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "bcrypt": "^6.0.0",
+    "elysia": "latest",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "bun-types": "latest"

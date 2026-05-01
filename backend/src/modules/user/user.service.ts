@@ -1,4 +1,5 @@
 import { query } from "../../utils/db";
+import bcrypt from "bcrypt";
 
 export const getUsers = async () => {
   return await query(
@@ -9,11 +10,12 @@ export const getUsers = async () => {
 };
 
 export const createUser = async (name: string, email: string, password: string) => {
+  const hashed = await bcrypt.hash(password, 10);
   return await query(
     `INSERT INTO "User" (name, email, password)
      VALUES ($1, $2, $3)
      RETURNING id_user, name, email`,
-    [name, email, password]
+    [name, email, hashed]
   );
 };
 
