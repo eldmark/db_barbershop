@@ -18,12 +18,6 @@ export interface Permission {
   name: string;
 }
 
-export interface Employee {
-  id_employee?: number;
-  name: string;
-  specialty?: string | null;
-  salary: number;
-}
 
 export interface Category {
   id_category?: number;
@@ -92,3 +86,9 @@ export interface SaleDetailService {
   quantity: number;
   unit_price: number;
 }
+
+export type SaleDetailProductInput = Pick<SaleDetailProduct, "id_product" | "quantity" | "unit_price">;
+
+export type SaleInput = Pick<Sale, "date" | "total" | "id_user" | "id_employee"> & {
+  products: SaleDetailProductInput[];
+};

@@ -4,7 +4,7 @@ import { pool } from "../config/db";
 
 export const query = async (text: string, params?: unknown[]) => {
   try {
-    const res = await pool.query(text, params as any[]);
+    const res = await pool.query(text, params ?? []);
     return res.rows;
   } catch (error) {
     console.error("DB Error:", error);

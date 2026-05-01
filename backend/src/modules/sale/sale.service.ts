@@ -1,6 +1,16 @@
 import { pool } from "../../config/db";
+import { SaleInput, SaleDetailProduct } from "../../types/entities";
 
-export const createSale = async (sale: any) => {
+type SaleRow = {
+  id_sale: number;
+  date: string;
+  total: number | null;
+  user_name?: string;
+  employee_name?: string;
+  products?: SaleDetailProduct[];
+};
+
+export const createSale = async (sale: SaleInput) => {
   const client = await pool.connect();
 
   try {
@@ -13,7 +23,7 @@ export const createSale = async (sale: any) => {
       [sale.date, sale.total, sale.id_user, sale.id_employee]
     );
 
-    const saleId = saleResult.rows[0].id_sale;
+    const saleId: number = saleResult.rows[0].id_sale;
 
     for (const item of sale.products) {
       await client.query(
@@ -63,7 +73,7 @@ export const deleteSale = async (id: number) => {
   }
 }
 export const getSales = async () => {
-  return await pool.query(
+  return await pool.query<SaleRow>(
     `SELECT s.id_sale, s.date, s.total, u.name AS user_name, e.name AS employee_name
       FROM Sale s
       JOIN "User" u ON s.id_user = u.id_user
@@ -73,7 +83,7 @@ export const getSales = async () => {
 };
 
 export const getSaleById = async (id: number) => {
-  const saleResult = await pool.query(
+  const saleResult = await pool.query<SaleRow>(
     `SELECT s.id_sale, s.date, s.total, u.name AS user_name, e.name AS employee_name
      FROM Sale s
      JOIN "User" u ON s.id_user = u.id_user
@@ -86,7 +96,7 @@ export const getSaleById = async (id: number) => {
   }
   const sale = saleResult.rows[0];
 
-  const productsResult = await pool.query( 
+  const productsResult = await pool.query<SaleDetailProduct>( 
     `SELECT sd.id_sale, sd.id_product, sd.quantity, sd.unit_price, p.name AS product_name
      FROM SaleDetailProduct sd
      JOIN Product p ON sd.id_product = p.id_product
@@ -99,7 +109,7 @@ export const getSaleById = async (id: number) => {
   return sale;
 };
 export const getSalesByUserId = async (userId: number) => {
-  const salesResult = await pool.query(
+  const salesResult = await pool.query<SaleRow>(
     `SELECT s.id_sale, s.date, s.total, e.name AS employee_name
       FROM Sale s
       JOIN Employee e ON s.id_employee = e.id_employee
@@ -108,7 +118,7 @@ export const getSalesByUserId = async (userId: number) => {
   );  
   const sales = salesResult.rows;
   for (const sale of sales) {
-    const productsResult = await pool.query(
+    const productsResult = await pool.query<SaleDetailProduct>(
       `SELECT sd.id_sale, sd.id_product, sd.quantity, sd.unit_price, p.name AS product_name
        FROM SaleDetailProduct sd
         JOIN Product p ON sd.id_product = p.id_product
@@ -135,8 +145,8 @@ export const restoreSale = async (id: number) => {
       WHERE id_sale = $1`,
     [id]
   );
-}
-export const updateSale = async (id: number, sale: any) => {
+};
+export const updateSale = async (id: number, sale: SaleInput) => {
   const client = await pool.connect();
   const { date, total, id_user, id_employee, products } = sale;
   try {
@@ -157,9 +167,13 @@ export const updateSale = async (id: number, sale: any) => {
          VALUES ($1, $2, $3, $4)`,
         [id, item.id_product, item.quantity, item.unit_price]
       );
-    }} catch (error) {
+    }
+    await client.query("COMMIT");
+    return { success: true };
+  } catch (error) {
     await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
-  } };
+  }
+};
