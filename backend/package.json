@@ -8,9 +8,11 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "elysia": "latest",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "bun-types": "latest"
   },
   "module": "src/index.js"
