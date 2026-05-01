@@ -51,7 +51,6 @@ export const requireRole = <TContext extends AuthContext>(handler: Handler<TCont
     const userId = ctx.user?.id_user;
     if (!userId) return { status: 403, body: { error: "Forbidden" } };
     if (roles.length === 0) return handler(ctx);
-    // fetch roles from DB
     const res = await pool.query(
       `SELECT r.name FROM Role r JOIN UserRole ur ON r.id_role = ur.id_role WHERE ur.id_user = $1`,
       [userId]

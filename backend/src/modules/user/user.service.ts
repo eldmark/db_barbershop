@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 export const getUsers = async () => {
   return await query(
     `SELECT id_user, name, email 
-     FROM "User"
+     FROM "User",
      WHERE deleted_at IS NULL`
   );
 };
