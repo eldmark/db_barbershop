@@ -1,8 +1,10 @@
+export type RouteHandler = (ctx?: unknown) => unknown | Promise<unknown>;
+
 export type RouteApp = {
-  get: (...args: unknown[]) => unknown;
-  post: (...args: unknown[]) => unknown;
-  put: (...args: unknown[]) => unknown;
-  delete: (...args: unknown[]) => unknown;
+  get: (path: string, handler?: RouteHandler) => unknown;
+  post: (path: string, handler?: RouteHandler) => unknown;
+  put: (path: string, handler?: RouteHandler) => unknown;
+  delete: (path: string, handler?: RouteHandler) => unknown;
 };
 
 export type IdParams = {

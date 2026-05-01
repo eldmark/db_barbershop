@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { RouteApp } from "./types/http";
 import { registerProductRoutes } from "./modules/product/product.routes";
 import { registerUserRoutes } from "./modules/user/user.routes";
 import { registerSaleRoutes } from "./modules/sale/sale.routes";
@@ -15,18 +16,20 @@ import { pool } from "./config/db";
 
 const app = new Elysia();
 
-registerProductRoutes(app);
-registerUserRoutes(app);
-registerSaleRoutes(app);
-registerCategoryRoutes(app);
-registerSupplierRoutes(app);
-registerServiceRoutes(app);
-registerReservationRoutes(app);
-registerRoleRoutes(app);
-registerPermissionRoutes(app);
-registerSaleDetailProductRoutes(app);
-registerSaleDetailServiceRoutes(app);
-registerAuthRoutes(app);
+const routeApp = app as unknown as RouteApp;
+
+registerAuthRoutes(routeApp);
+registerUserRoutes(routeApp);
+registerProductRoutes(routeApp);
+registerSaleRoutes(routeApp);
+registerCategoryRoutes(routeApp);
+registerSupplierRoutes(routeApp);
+registerServiceRoutes(routeApp);
+registerReservationRoutes(routeApp);
+registerRoleRoutes(routeApp);
+registerPermissionRoutes(routeApp);
+registerSaleDetailProductRoutes(routeApp);
+registerSaleDetailServiceRoutes(routeApp);
 
 app.get("/", () => "Server is running");
 
