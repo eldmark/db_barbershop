@@ -17,27 +17,39 @@ export const createSale = async (sale: SaleInput) => {
     await client.query("BEGIN");
 
     const saleResult = await client.query(
-      `INSERT INTO Sale (date, total, id_user, id_employee)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO Sale (date, total, id_user, id_employee, id_reservation)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id_sale`,
-      [sale.date, sale.total, sale.id_user, sale.id_employee]
+      [sale.date, sale.total, sale.id_user, sale.id_employee, sale.id_reservation || null]
     );
 
     const saleId: number = saleResult.rows[0].id_sale;
 
-    for (const item of sale.products) {
-      await client.query(
-        `INSERT INTO SaleDetailProduct (id_sale, id_product, quantity, unit_price)
-         VALUES ($1, $2, $3, $4)`,
-        [saleId, item.id_product, item.quantity, item.unit_price]
-      );
+    // Insert products - Trigger trg_update_stock_after_sale handles stock now
+    if (sale.products && sale.products.length > 0) {
+      for (const item of sale.products) {
+        await client.query(
+          `INSERT INTO SaleDetailProduct (id_sale, id_product, quantity, unit_price)
+           VALUES ($1, $2, $3, $4)`,
+          [saleId, item.id_product, item.quantity, item.unit_price]
+        );
+      }
+    }
 
-      await client.query(
-        `UPDATE Product
-         SET stock = stock - $1
-         WHERE id_product = $2`,
-        [item.quantity, item.id_product]
-      );
+    // Insert services
+    if (sale.services && sale.services.length > 0) {
+      for (const item of sale.services) {
+        await client.query(
+          `INSERT INTO SaleDetailService (id_sale, id_service, quantity, unit_price)
+           VALUES ($1, $2, $3, $4)`,
+          [saleId, item.id_service, item.quantity, item.unit_price]
+        );
+      }
+    }
+
+    // If it comes from a reservation, mark reservation as completed using procedure
+    if (sale.id_reservation) {
+      await client.query(`CALL pr_complete_reservation($1)`, [sale.id_reservation]);
     }
 
     await client.query("COMMIT");
@@ -73,13 +85,15 @@ export const deleteSale = async (id: number) => {
   }
 }
 export const getSales = async () => {
-  return await pool.query<SaleRow>(
-    `SELECT s.id_sale, s.date, s.total, u.name AS user_name, e.name AS employee_name
+  const res = await pool.query<SaleRow>(
+    `SELECT s.id_sale, s.date, s.total, u.name AS user_name, e.name AS employee_name, s.created_at
       FROM Sale s
       JOIN "User" u ON s.id_user = u.id_user
-      JOIN Employee e ON s.id_employee = e.id_employee
-      WHERE s.deleted_at IS NULL`
+      JOIN "User" e ON s.id_employee = e.id_user
+      WHERE s.deleted_at IS NULL
+      ORDER BY s.created_at DESC`
   );
+  return res.rows;
 };
 
 export const getSaleById = async (id: number) => {
@@ -87,7 +101,7 @@ export const getSaleById = async (id: number) => {
     `SELECT s.id_sale, s.date, s.total, u.name AS user_name, e.name AS employee_name
      FROM Sale s
      JOIN "User" u ON s.id_user = u.id_user
-     JOIN Employee e ON s.id_employee = e.id_employee
+     JOIN "User" e ON s.id_employee = e.id_user
      WHERE s.id_sale = $1 AND s.deleted_at IS NULL`,
     [id]
   );
@@ -104,7 +118,16 @@ export const getSaleById = async (id: number) => {
     [id]
   );
 
+  const servicesResult = await pool.query(
+    `SELECT sd.id_sale, sd.id_service, sd.quantity, sd.unit_price, s.name AS service_name
+     FROM SaleDetailService sd
+     JOIN Service s ON sd.id_service = s.id_service
+     WHERE sd.id_sale = $1`,
+    [id]
+  );
+
   sale.products = productsResult.rows;
+  (sale as any).services = servicesResult.rows;
 
   return sale;
 };
@@ -112,7 +135,7 @@ export const getSalesByUserId = async (userId: number) => {
   const salesResult = await pool.query<SaleRow>(
     `SELECT s.id_sale, s.date, s.total, e.name AS employee_name
       FROM Sale s
-      JOIN Employee e ON s.id_employee = e.id_employee
+      JOIN "User" e ON s.id_employee = e.id_user
       WHERE s.id_user = $1 AND s.deleted_at IS NULL`,
     [userId]
   );  
