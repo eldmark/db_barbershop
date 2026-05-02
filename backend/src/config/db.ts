@@ -13,14 +13,26 @@ if (!process.env.DATABASE_URL) {
     }
 }
 
+// Coerce env values to strings to avoid driver errors when values come from non-string sources
+const connectionString = process.env.DATABASE_URL ? String(process.env.DATABASE_URL) : undefined;
+const host = process.env.DB_HOST ? String(process.env.DB_HOST) : undefined;
+const user = process.env.DB_USER ? String(process.env.DB_USER) : undefined;
+const password = process.env.DB_PASSWORD !== undefined ? String(process.env.DB_PASSWORD) : undefined;
+const database = process.env.DB_NAME ? String(process.env.DB_NAME) : undefined;
+
 export const pool = new Pool(
-    process.env.DATABASE_URL
-        ? { connectionString: process.env.DATABASE_URL }
+    connectionString
+        ? { connectionString }
         : {
-                host: process.env.DB_HOST,
+                host,
                 port,
-                user: process.env.DB_USER,
-                password: process.env.DB_PASSWORD,
-                database: process.env.DB_NAME,
+                user,
+                password,
+                database,
             }
 );
+
+// Helpful runtime check when connection problems occur
+if (!connectionString && (!host || !user || !database)) {
+    console.warn(`DB pool created with missing configuration: host=${host}, user=${user}, database=${database}`);
+}

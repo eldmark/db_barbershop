@@ -1,4 +1,4 @@
-export type RouteHandler = (ctx?: unknown) => unknown | Promise<unknown>;
+export type RouteHandler = (...args: any[]) => unknown | Promise<unknown>;
 
 export type RouteApp = {
   get: (path: string, handler?: RouteHandler) => unknown;

@@ -8,16 +8,6 @@ export interface AuthTokenPayload extends JwtPayload {
   roles: string[];
 }
 
-type AuthContext = {
-  headers?: Record<string, string | undefined>;
-  request?: {
-    headers?: Record<string, string | undefined>;
-  };
-  user?: AuthTokenPayload;
-};
-
-type Handler<TContext extends AuthContext> = (ctx: TContext) => unknown | Promise<unknown>;
-
 export const signToken = (payload: AuthTokenPayload) => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "1h" });
 };
@@ -28,36 +18,70 @@ export const verifyToken = (token: string): AuthTokenPayload | null => {
     if (typeof decoded === "string") return null;
     return decoded as AuthTokenPayload;
   } catch (err) {
+    console.error("Token verification error:", err);
     return null;
   }
 };
 
-export const requireAuth = <TContext extends AuthContext>(handler: Handler<TContext>) => {
-  return async (ctx: TContext) => {
-    const authHeader = ctx.headers?.authorization || ctx.request?.headers?.authorization;
+// Guard-style middleware for Elysia
+export const createAuthGuard = () => {
+  return async (ctx: any) => {
+    const authHeader = ctx.request?.headers?.get("authorization") || ctx.headers?.authorization;
+    console.log("Auth guard - authHeader:", authHeader);
+    
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return { status: 401, body: { error: "Missing token" } };
+      throw new Error("Missing token");
     }
+    
     const token = authHeader.split(" ")[1];
+    console.log("Auth guard - token:", token.substring(0, 20) + "...");
+    
     const decoded = verifyToken(token);
-    if (!decoded) return { status: 401, body: { error: "Invalid token" } };
+    if (!decoded) {
+      throw new Error("Invalid token");
+    }
+    
     ctx.user = decoded;
-    return handler(ctx);
   };
 };
 
-export const requireRole = <TContext extends AuthContext>(handler: Handler<TContext>, roles: string[] = []) => {
-  return requireAuth(async (ctx: TContext) => {
+// Role guard for Elysia
+export const createRoleGuard = (roles: Array<string | number>) => {
+  return async (ctx: any) => {
+    // First apply auth
+    await createAuthGuard()(ctx);
+
+    if (roles.length === 0) return;
+
     const userId = ctx.user?.id_user;
-    if (!userId) return { status: 403, body: { error: "Forbidden" } };
-    if (roles.length === 0) return handler(ctx);
-    const res = await pool.query(
-      `SELECT r.name FROM Role r JOIN UserRole ur ON r.id_role = ur.id_role WHERE ur.id_user = $1`,
-      [userId]
-    );
-    const userRoles = res.rows.map((r: { name: string }) => r.name);
-    const ok = roles.some((r) => userRoles.includes(r));
-    if (!ok) return { status: 403, body: { error: "Forbidden " } };
-    return handler(ctx);
-  });
+    if (!userId) throw new Error("Forbidden");
+
+    try {
+      const res = await pool.query(
+        `SELECT r.id_role, r.name FROM Role r JOIN UserRole ur ON r.id_role = ur.id_role WHERE ur.id_user = $1`,
+        [userId]
+      );
+
+      // Build a set containing both role names and ids as strings for flexible matching
+      const userRolesSet = new Set<string>();
+      for (const row of res.rows) {
+        if (row.name) userRolesSet.add(String(row.name));
+        if (row.id_role !== undefined && row.id_role !== null) userRolesSet.add(String(row.id_role));
+      }
+
+      // Also include roles from token if present
+      if (Array.isArray(ctx.user?.roles)) {
+        for (const r of ctx.user.roles) userRolesSet.add(String(r));
+      }
+
+      console.log("User roles (set):", Array.from(userRolesSet), "Required:", roles);
+
+      const ok = roles.some((r) => userRolesSet.has(String(r)));
+      if (!ok) throw new Error("Forbidden");
+    } catch (err: any) {
+      if (err.message === "Forbidden") throw err;
+      console.error("Role check error:", err);
+      throw new Error("Forbidden");
+    }
+  };
 };

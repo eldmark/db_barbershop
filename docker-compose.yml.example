@@ -13,21 +13,30 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U proy2"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
     container_name: barber_backend
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: proy2
       DB_PASSWORD: secret
       DB_NAME: barberdb
+      JWT_SECRET: your-secret-key-here-min-32-chars
     ports:
       - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
 
   frontend:
     build: ./frontend
@@ -35,8 +44,12 @@ services:
     restart: always
     depends_on:
       - backend
+    environment:
+      VITE_API_URL: http://localhost:3000
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
 
 volumes:
   db_data:
