@@ -1,11 +1,13 @@
 import * as controller from "./sale.controller";
-import { getDashboardStats } from "./sale.summary";
+import { getDashboardStats, getTopSellingProducts, getActiveCustomers } from "./sale.summary";
 import { createAuthGuard, createRoleGuard } from "../../middleware/auth";
 import { SaleInput } from "../../types/entities";
 import { IdParams, RouteApp, RouteContext, UserIdParams } from "../../types/http";
 
 export const registerSaleRoutes = (app: RouteApp) => {
   app.get("/sales/summary", async () => getDashboardStats(), { guard: createAuthGuard() });
+  app.get("/sales/top-products", async () => getTopSellingProducts(), { guard: createAuthGuard() });
+  app.get("/sales/active-customers", async () => getActiveCustomers(), { guard: createAuthGuard() });
   app.post("/sales", async ({ body }: RouteContext<Record<string, never>, SaleInput>) => controller.createSale(body), { guard: createRoleGuard(["employee", "admin"]) });
   app.get("/sales", async () => controller.getSales(), { guard: createAuthGuard() });
   app.get("/sales/:id", async ({ params }: RouteContext<IdParams>) => controller.getSaleById(params), { guard: createAuthGuard() });
