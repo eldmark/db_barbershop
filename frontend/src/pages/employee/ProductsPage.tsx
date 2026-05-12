@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionHeader from "../../components/common/SectionHeader";
 import DataTable from "../../components/common/DataTable";
@@ -18,38 +18,92 @@ type Product = {
 type Category = { id_category: number; name: string };
 type Supplier = { id_supplier: number; name: string };
 
-export default function ProductsPage() {
-  const { token } = useAuth();
-  const navigate = useNavigate();
-  const [items, setItems] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
+type FormState = {
+  name: string;
+  price: string;
+  stock: string;
+  id_category: string;
+  id_supplier: string;
+};
+
+type State = {
+  items: Product[];
+  categories: Category[];
+  suppliers: Supplier[];
+  loading: boolean;
+  error: string | null;
+  form: FormState;
+};
+
+type Action =
+  | { type: "FETCH_START" }
+  | { type: "FETCH_SUCCESS"; payload: { items: Product[]; categories: Category[]; suppliers: Supplier[] } }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "UPDATE_FORM"; payload: Partial<FormState> }
+  | { type: "RESET_FORM" };
+
+const initialState: State = {
+  items: [],
+  categories: [],
+  suppliers: [],
+  loading: true,
+  error: null,
+  form: {
     name: "",
     price: "",
     stock: "",
     id_category: "",
     id_supplier: ""
-  });
+  }
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "FETCH_START":
+      return { ...state, loading: true, error: null };
+    case "FETCH_SUCCESS":
+      return {
+        ...state,
+        loading: false,
+        items: action.payload.items,
+        categories: action.payload.categories,
+        suppliers: action.payload.suppliers
+      };
+    case "SET_ERROR":
+      return { ...state, error: action.payload };
+    case "UPDATE_FORM":
+      return { ...state, form: { ...state.form, ...action.payload } };
+    case "RESET_FORM":
+      return { ...state, form: initialState.form };
+    default:
+      return state;
+  }
+}
+
+export default function ProductsPage() {
+  const { token } = useAuth();
+  const navigate = useNavigate();
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { items, categories, suppliers, loading, error, form } = state;
 
   const loadProducts = async () => {
-    setLoading(true);
-    setError(null);
+    dispatch({ type: "FETCH_START" });
     try {
       const [data, cats, sups] = await Promise.all([
         apiFetch<Product[]>("/products", { token }).catch(() => []),
         apiFetch<Category[]>("/categories", { token }).catch(() => []),
         apiFetch<Supplier[]>("/suppliers", { token }).catch(() => [])
       ]);
-      setItems(Array.isArray(data) ? data : []);
-      setCategories(Array.isArray(cats) ? cats : []);
-      setSuppliers(Array.isArray(sups) ? sups : []);
+      dispatch({
+        type: "FETCH_SUCCESS",
+        payload: {
+          items: Array.isArray(data) ? data : [],
+          categories: Array.isArray(cats) ? cats : [],
+          suppliers: Array.isArray(sups) ? sups : []
+        }
+      });
     } catch (err) {
-      setError("Request could not be completed");
-    } finally {
-      setLoading(false);
+      dispatch({ type: "SET_ERROR", payload: "Request could not be completed" });
     }
   };
 
@@ -59,10 +113,10 @@ export default function ProductsPage() {
 
   const handleCreate = async () => {
     if (!form.name || !form.price || !form.stock || !form.id_category || !form.id_supplier) {
-      setError("Missing required information");
+      dispatch({ type: "SET_ERROR", payload: "Missing required information" });
       return;
     }
-    setError(null);
+    dispatch({ type: "SET_ERROR", payload: null });
     try {
       await apiFetch<Product>("/products", {
         method: "POST",
@@ -75,20 +129,20 @@ export default function ProductsPage() {
           id_supplier: Number(form.id_supplier)
         })
       });
-      setForm({ name: "", price: "", stock: "", id_category: "", id_supplier: "" });
+      dispatch({ type: "RESET_FORM" });
       await loadProducts();
     } catch (err) {
-      setError("Request could not be completed");
+      dispatch({ type: "SET_ERROR", payload: "Request could not be completed" });
     }
   };
 
   const handleDelete = async (id: number) => {
-    setError(null);
+    dispatch({ type: "SET_ERROR", payload: null });
     try {
       await apiFetch<void>(`/products/${id}`, { method: "DELETE", token });
       await loadProducts();
     } catch (err) {
-      setError("Request could not be completed");
+      dispatch({ type: "SET_ERROR", payload: "Request could not be completed" });
     }
   };
 
@@ -164,26 +218,26 @@ export default function ProductsPage() {
               className="input"
               placeholder="Name"
               value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              onChange={(event) => dispatch({ type: "UPDATE_FORM", payload: { name: event.target.value } })}
             />
             <input
               className="input"
               type="number"
               placeholder="Price"
               value={form.price}
-              onChange={(event) => setForm({ ...form, price: event.target.value })}
+              onChange={(event) => dispatch({ type: "UPDATE_FORM", payload: { price: event.target.value } })}
             />
             <input
               className="input"
               type="number"
               placeholder="Stock"
               value={form.stock}
-              onChange={(event) => setForm({ ...form, stock: event.target.value })}
+              onChange={(event) => dispatch({ type: "UPDATE_FORM", payload: { stock: event.target.value } })}
             />
             <select
               className="input"
               value={form.id_category}
-              onChange={(event) => setForm({ ...form, id_category: event.target.value })}
+              onChange={(event) => dispatch({ type: "UPDATE_FORM", payload: { id_category: event.target.value } })}
             >
               <option value="">Select category</option>
               {categories.map((c) => (
@@ -193,7 +247,7 @@ export default function ProductsPage() {
             <select
               className="input"
               value={form.id_supplier}
-              onChange={(event) => setForm({ ...form, id_supplier: event.target.value })}
+              onChange={(event) => dispatch({ type: "UPDATE_FORM", payload: { id_supplier: event.target.value } })}
             >
               <option value="">Select supplier</option>
               {suppliers.map((s) => (
