@@ -15,6 +15,7 @@ import { registerSaleDetailServiceRoutes } from "./modules/saleDetailService/sal
 import { registerAuthRoutes } from "./modules/auth/auth.routes";
 import { pool } from "./config/db";
 import bcrypt from "bcrypt";
+const port = process.env.PORT || 3000;
 
 const app = new Elysia().use(
 	cors({
@@ -96,7 +97,10 @@ app.get("/setup-demo", async () => {
 
 // Utility endpoint to correct demo user role mappings (temporary)
 // Temporary role-fix endpoint removed after verification.
-const server = app.listen(3000);
+const server = app.listen({
+	port, PORT,
+	hostname: "0.0.0.0"
+});
 
 // Attempt to create demo users on startup (idempotent)
 void (async () => {

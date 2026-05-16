@@ -2,7 +2,7 @@
 -- USER & AUTHORIZATION
 -- =========================
 
-CREATE TABLE Role (
+CREATE TABLE "Role"(
   id_role SERIAL PRIMARY KEY,
   name VARCHAR(50) NOT NULL
 );
@@ -17,49 +17,49 @@ CREATE TABLE "User" (
   deleted_at TIMESTAMP
 );
 
-CREATE TABLE Permission (
+CREATE TABLE "Permission" (
     id_permission SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE UserRole (
+CREATE TABLE "UserRole" (
   id_user INT NOT NULL,
   id_role INT NOT NULL,
   PRIMARY KEY (id_user, id_role),
   FOREIGN KEY (id_user) REFERENCES "User"(id_user) ON DELETE CASCADE,
-  FOREIGN KEY (id_role) REFERENCES Role(id_role) ON DELETE CASCADE
+  FOREIGN KEY (id_role) REFERENCES "Role"(id_role) ON DELETE CASCADE
 );
 
-CREATE TABLE RolePermission (
+CREATE TABLE "RolePermission" (
     id_role INT NOT NULL,
     id_permission INT NOT NULL,
     PRIMARY KEY (id_role, id_permission),
-    FOREIGN KEY (id_role) REFERENCES Role(id_role) ON DELETE CASCADE,
-    FOREIGN KEY (id_permission) REFERENCES Permission(id_permission) ON DELETE CASCADE
+    FOREIGN KEY (id_role) REFERENCES "Role"(id_role) ON DELETE CASCADE,
+    FOREIGN KEY (id_permission) REFERENCES "Permission"(id_permission) ON DELETE CASCADE
 );
 
 -- =========================
 -- CORE ENTITIES
 -- =========================
 
-CREATE TABLE Category (
+CREATE TABLE "Category" (
     id_category SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE Supplier (
+CREATE TABLE "Supplier" (
     id_supplier SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     contact VARCHAR(100)
 );
 
-CREATE TABLE Service (
+CREATE TABLE "Service" (
     id_service SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     price DECIMAL(10,2) NOT NULL
 );
 
-CREATE TABLE Product (
+CREATE TABLE "Product" (
     id_product SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     price DECIMAL(10,2) NOT NULL,
@@ -67,15 +67,15 @@ CREATE TABLE Product (
     id_category INT NOT NULL,
     id_supplier INT NOT NULL,
 
-    FOREIGN KEY (id_category) REFERENCES Category(id_category),
-    FOREIGN KEY (id_supplier) REFERENCES Supplier(id_supplier)
+    FOREIGN KEY (id_category) REFERENCES "Category"(id_category),
+    FOREIGN KEY (id_supplier) REFERENCES "Supplier"(id_supplier)
 );
 
 -- =========================
 -- RESERVATIONS
 -- =========================
 
-CREATE TABLE Reservation (
+CREATE TABLE "Reservation" (
     id_reservation SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     time TIME NOT NULL,
@@ -91,14 +91,14 @@ CREATE TABLE Reservation (
 
     FOREIGN KEY (id_user) REFERENCES "User"(id_user),
     FOREIGN KEY (id_employee) REFERENCES "User"(id_user),
-    FOREIGN KEY (id_service) REFERENCES Service(id_service)
+    FOREIGN KEY (id_service) REFERENCES "Service"(id_service)
 );
 
 -- =========================
 -- SALES
 -- =========================
 
-CREATE TABLE Sale (
+CREATE TABLE "Sale"  (
     id_sale SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     total DECIMAL(10,2),
@@ -113,14 +113,14 @@ CREATE TABLE Sale (
 
     FOREIGN KEY (id_user) REFERENCES "User"(id_user),
     FOREIGN KEY (id_employee) REFERENCES "User"(id_user),
-    FOREIGN KEY (id_reservation) REFERENCES Reservation(id_reservation)
+    FOREIGN KEY (id_reservation) REFERENCES "Reservation"(id_reservation)
 );
 
 -- =========================
 -- SALE DETAILS (PRODUCTS)
 -- =========================
 
-CREATE TABLE SaleDetailProduct (
+CREATE TABLE "SaleDetailProduct" (
     id_sale_detail_product SERIAL PRIMARY KEY,
     id_sale INT NOT NULL,
     id_product INT NOT NULL,
@@ -135,15 +135,15 @@ CREATE TABLE SaleDetailProduct (
 -- SALE DETAILS (SERVICES)
 -- =========================
 
-CREATE TABLE SaleDetailService (
+CREATE TABLE "SaleDetailService" (
     id_sale_detail_service SERIAL PRIMARY KEY,
     id_sale INT NOT NULL,
     id_service INT NOT NULL,
     quantity INT NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
 
-    FOREIGN KEY (id_sale) REFERENCES Sale(id_sale) ON DELETE CASCADE,
-    FOREIGN KEY (id_service) REFERENCES Service(id_service)
+    FOREIGN KEY (id_sale) REFERENCES "Sale"(id_sale) ON DELETE CASCADE,
+    FOREIGN KEY (id_service) REFERENCES "Service"(id_service)
 );
 
 -- =========================
