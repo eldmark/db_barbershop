@@ -6,9 +6,9 @@ export const createDemoUsers = async () => {
     const hashedPassword = await bcrypt.hash("password123", 10);
 
     // Ensure roles exist
-    await pool.query(`INSERT INTO Role (name) VALUES ('admin') ON CONFLICT DO NOTHING`);
-    await pool.query(`INSERT INTO Role (name) VALUES ('employee') ON CONFLICT DO NOTHING`);
-    await pool.query(`INSERT INTO Role (name) VALUES ('client') ON CONFLICT DO NOTHING`);
+    await pool.query(`INSERT INTO role (name) VALUES ('admin') ON CONFLICT DO NOTHING`);
+    await pool.query(`INSERT INTO role (name) VALUES ('employee') ON CONFLICT DO NOTHING`);
+    await pool.query(`INSERT INTO role (name) VALUES ('client') ON CONFLICT DO NOTHING`);
 
     const demoUsers = [
       { name: "Admin User", email: "admin@example.com", roleName: "admin" },
@@ -18,7 +18,7 @@ export const createDemoUsers = async () => {
 
     for (const u of demoUsers) {
       const result = await pool.query(
-        `INSERT INTO "User" (name, email, password) VALUES ($1, $2, $3)
+        `INSERT INTO user_account (name, email, password) VALUES ($1, $2, $3)
          ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password
          RETURNING id_user`,
         [u.name, u.email, hashedPassword]
@@ -26,10 +26,10 @@ export const createDemoUsers = async () => {
 
       const userId = result.rows[0]?.id_user;
       if (userId) {
-        const roleRes = await pool.query(`SELECT id_role FROM Role WHERE name = $1 LIMIT 1`, [u.roleName]);
+        const roleRes = await pool.query(`SELECT id_role FROM role WHERE name = $1 LIMIT 1`, [u.roleName]);
         const roleId = roleRes.rows[0]?.id_role;
         if (roleId) {
-          await pool.query(`INSERT INTO UserRole (id_user, id_role) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [userId, roleId]);
+          await pool.query(`INSERT INTO user_role (id_user, id_role) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [userId, roleId]);
         }
       }
     }

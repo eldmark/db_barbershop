@@ -70,9 +70,9 @@ app.get("/debug/users", async () => {
 	try {
 		const res = await pool.query(
 			`SELECT u.id_user, u.name, u.email, COALESCE(json_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '[]') AS roles
-			 FROM "User" u
-			 LEFT JOIN UserRole ur ON u.id_user = ur.id_user
-			 LEFT JOIN Role r ON ur.id_role = r.id_role
+			 FROM user_account u
+			 LEFT JOIN user_role ur ON u.id_user = ur.id_user
+			 LEFT JOIN role r ON ur.id_role = r.id_role
 			 GROUP BY u.id_user, u.name, u.email`
 		);
 		return { users: res.rows };

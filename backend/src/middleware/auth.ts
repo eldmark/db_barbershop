@@ -58,7 +58,7 @@ export const createRoleGuard = (roles: Array<string | number>) => {
 
     try {
       const res = await pool.query(
-        `SELECT r.id_role, r.name FROM Role r JOIN UserRole ur ON r.id_role = ur.id_role WHERE ur.id_user = $1`,
+        `SELECT r.id_role, r.name FROM role r JOIN user_role ur ON r.id_role = ur.id_role WHERE ur.id_user = $1`,
         [userId]
       );
 

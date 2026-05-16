@@ -6,13 +6,13 @@ export const getDashboardStats = async () => {
   // Requirement: CTE (WITH)
   const stats = await query(`
     WITH DailySales AS (
-      SELECT total FROM Sale WHERE date = $1 AND deleted_at IS NULL
+      SELECT total FROM sale WHERE date = $1 AND deleted_at IS NULL
     ),
     WeeklySales AS (
-      SELECT total FROM Sale WHERE date >= CURRENT_DATE - INTERVAL '7 days' AND deleted_at IS NULL
+      SELECT total FROM sale WHERE date >= CURRENT_DATE - INTERVAL '7 days' AND deleted_at IS NULL
     ),
     LowStockCount AS (
-      SELECT COUNT(*) as count FROM Product WHERE stock < 10
+      SELECT COUNT(*) as count FROM product WHERE stock < 10
     )
     SELECT 
       (SELECT COALESCE(SUM(total), 0) FROM DailySales) as today_total,
@@ -31,8 +31,8 @@ export const getDashboardStats = async () => {
 export const getTopSellingProducts = async () => {
   return await query(`
     SELECT p.name, SUM(sd.quantity) as total_sold, SUM(sd.quantity * sd.unit_price) as total_revenue
-    FROM SaleDetailProduct sd
-    JOIN Product p ON sd.id_product = p.id_product
+    FROM sale_detail_product sd
+    JOIN product p ON sd.id_product = p.id_product
     GROUP BY p.name
     HAVING SUM(sd.quantity) > 1
     ORDER BY total_sold DESC
@@ -44,9 +44,9 @@ export const getTopSellingProducts = async () => {
 export const getActiveCustomers = async () => {
   return await query(`
     SELECT name, email 
-    FROM "User" 
+    FROM user_account 
     WHERE id_user IN (
-      SELECT DISTINCT id_user FROM Sale
+      SELECT DISTINCT id_user FROM sale
     )
     LIMIT 10
   `);
