@@ -1,7 +1,7 @@
 type StatCardProps = {
   label: string;
   value: string;
-  trend: string;
+  trend?: string;
   tone?: "primary" | "accent" | "success";
 };
 
@@ -16,7 +16,7 @@ export default function StatCard({ label, value, trend, tone = "primary" }: Stat
     <div className="panel-solid p-5">
       <div className="flex items-center justify-between">
         <p className="text-xs uppercase tracking-[0.2em] text-content/50">{label}</p>
-        <span className={`badge ${toneClasses[tone]}`}>{trend}</span>
+        {trend && <span className={`badge ${toneClasses[tone]}`}>{trend}</span>}
       </div>
       <p className="mt-4 text-3xl font-semibold text-content">{value}</p>
     </div>
