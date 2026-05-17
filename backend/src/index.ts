@@ -98,7 +98,7 @@ app.get("/setup-demo", async () => {
 // Utility endpoint to correct demo user role mappings (temporary)
 // Temporary role-fix endpoint removed after verification.
 const server = app.listen({
-	port, PORT,
+	port: Number(port),
 	hostname: "0.0.0.0"
 });
 

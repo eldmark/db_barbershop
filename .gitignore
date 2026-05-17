@@ -2,7 +2,11 @@
 agents.md
 docker-compose.yml
 .env
-
+*.env.*
+*.log
+logs/
+docker-compose.production.yml
+Dockerfile.production
 # dependencies
 /node_modules
 **/node_modules
