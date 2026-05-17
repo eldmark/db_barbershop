@@ -2,6 +2,8 @@
 
 > Full-stack database project for a barber shop appointment and inventory management system. Features JWT authentication with role-based access control, real-time reservations, product inventory, and service management.
 > Production link: http://136.113.119.228/
+
+
 **Table of Contents**
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
