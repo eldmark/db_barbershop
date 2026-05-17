@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionHeader from "../../components/common/SectionHeader";
 import DataTable from "../../components/common/DataTable";
@@ -9,7 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 type Product = {
   id_product?: number;
   name: string;
-  price: number;
+  price: number | string;
   stock: number;
   id_category: number;
   id_supplier: number;
@@ -86,7 +86,7 @@ export default function ProductsPage() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { items, categories, suppliers, loading, error, form } = state;
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     dispatch({ type: "FETCH_START" });
     try {
       const [data, cats, sups] = await Promise.all([
@@ -102,14 +102,14 @@ export default function ProductsPage() {
           suppliers: Array.isArray(sups) ? sups : []
         }
       });
-    } catch (err) {
+    } catch {
       dispatch({ type: "SET_ERROR", payload: "Request could not be completed" });
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     void loadProducts();
-  }, []);
+  }, [loadProducts]);
 
   const handleCreate = async () => {
     if (!form.name || !form.price || !form.stock || !form.id_category || !form.id_supplier) {
@@ -131,7 +131,7 @@ export default function ProductsPage() {
       });
       dispatch({ type: "RESET_FORM" });
       await loadProducts();
-    } catch (err) {
+    } catch {
       dispatch({ type: "SET_ERROR", payload: "Request could not be completed" });
     }
   };
@@ -141,7 +141,7 @@ export default function ProductsPage() {
     try {
       await apiFetch<void>(`/products/${id}`, { method: "DELETE", token });
       await loadProducts();
-    } catch (err) {
+    } catch {
       dispatch({ type: "SET_ERROR", payload: "Request could not be completed" });
     }
   };
@@ -155,13 +155,13 @@ export default function ProductsPage() {
         category: (categories.find((c) => c.id_category === item.id_category)?.name) ?? String(item.id_category),
         stock: String(item.stock),
         price: (() => {
-          const n = typeof item.price === "number" ? item.price : Number((item as any).price);
+          const n = Number(item.price);
           if (Number.isNaN(n)) return "$0.00";
           return `$${n.toFixed(2)}`;
         })(),
         actions: "" 
       })),
-    [items]
+    [items, categories]
   );
 
   return (
@@ -206,7 +206,7 @@ export default function ProductsPage() {
                 )
               }
             ]}
-            rows={rows as any}
+            rows={rows as unknown as Record<string, ReactNode>[]}
           />
         </div>
 
