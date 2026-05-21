@@ -1,22 +1,47 @@
-import { pool } from "../../config/db";
 import bcrypt from "bcrypt";
-import { signToken } from "../../middleware/auth";
-import { User } from "../../types/entities";
+import { prisma } from "../../config/prisma";
+import { createSession, destroySession, getSessionUser } from "../../middleware/session";
 
 export const login = async (email: string, password: string) => {
-  const res = await pool.query(`SELECT * FROM user_account WHERE email = $1 AND deleted_at IS NULL`, [email]);
-  if (res.rows.length === 0) return null;
-  const user: User & { password: string } = res.rows[0];
+  const user = await prisma.userAccount.findFirst({
+    where: {
+      email,
+      deleted_at: null
+    },
+    include: {
+      user_roles: {
+        include: {
+          role: true
+        }
+      }
+    }
+  });
+
+  if (!user) return null;
+
   const match = await bcrypt.compare(password, user.password);
   if (!match) return null;
 
-  // fetch roles
-  const rolesRes = await pool.query(
-    `SELECT r.name FROM role r JOIN user_role ur ON r.id_role = ur.id_role WHERE ur.id_user = $1`,
-    [user.id_user]
-  );
-  const roles = rolesRes.rows.map((r: { name: string }) => r.name);
+  const roles = user.user_roles.map((userRole) => userRole.role.name);
+  const sessionId = await createSession(user.id_user);
 
-  const token = signToken({ id_user: user.id_user, roles });
-  return { token, user: { id_user: user.id_user, name: user.name, email: user.email, roles } };
+  return {
+    sessionId,
+    user: {
+      id_user: user.id_user,
+      name: user.name,
+      email: user.email,
+      roles
+    }
+  };
+};
+
+export const logout = async (sessionId: string | null) => {
+  if (sessionId) await destroySession(sessionId);
+  return { success: true };
+};
+
+export const currentSession = async (sessionId: string | null) => {
+  if (!sessionId) return null;
+  return getSessionUser(sessionId);
 };

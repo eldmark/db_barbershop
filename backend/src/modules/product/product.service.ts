@@ -1,39 +1,60 @@
-import { query } from "../../utils/db";
+import { prisma } from "../../config/prisma";
 import { Product } from "../../types/entities";
 
+const productInclude = {
+  category: true,
+  supplier: true
+};
+
+const serializeProduct = (product: any) => ({
+  ...product,
+  price: product.price?.toString?.() ?? product.price,
+  category: product.category?.name,
+  supplier: product.supplier?.name
+});
+
 export const getProducts = async () => {
-  return query(`
-    SELECT p.*, c.name AS category, s.name AS supplier
-    FROM product p
-    JOIN category c ON p.id_category = c.id_category
-    JOIN supplier s ON p.id_supplier = s.id_supplier
-  `);
+  const products = await prisma.product.findMany({
+    include: productInclude,
+    orderBy: { id_product: "asc" }
+  });
+  return products.map(serializeProduct);
 };
 
 export const getProductById = async (id: number) => {
-  return query(`SELECT * FROM product WHERE id_product = $1`, [id]);
+  const product = await prisma.product.findUnique({
+    where: { id_product: id },
+    include: productInclude
+  });
+  return product ? serializeProduct(product) : null;
 };
 
 export const createProduct = async (data: Product) => {
-  return query(
-    `INSERT INTO product (name, price, stock, id_category, id_supplier)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING *`,
-    [data.name, data.price, data.stock, data.id_category, data.id_supplier]
-  );
+  return prisma.product.create({
+    data: {
+      name: data.name,
+      price: data.price,
+      stock: data.stock,
+      id_category: data.id_category,
+      id_supplier: data.id_supplier
+    }
+  });
 };
 
 export const updateProduct = async (id: number, data: Product) => {
-  return query(
-    `UPDATE product
-     SET name = $1, price = $2, stock = $3,
-         id_category = $4, id_supplier = $5
-     WHERE id_product = $6
-     RETURNING *`,
-    [data.name, data.price, data.stock, data.id_category, data.id_supplier, id]
-  );
+  return prisma.product.update({
+    where: { id_product: id },
+    data: {
+      name: data.name,
+      price: data.price,
+      stock: data.stock,
+      id_category: data.id_category,
+      id_supplier: data.id_supplier
+    }
+  });
 };
 
 export const deleteProduct = async (id: number) => {
-  return query(`DELETE FROM product WHERE id_product = $1`, [id]);
+  await prisma.product.delete({ where: { id_product: id } });
+  return { success: true };
 };

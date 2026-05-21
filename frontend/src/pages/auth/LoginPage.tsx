@@ -28,8 +28,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      const isEmployee = user.roles.some((role) => ["admin", "employee"].includes(role));
-      navigate(isEmployee ? "/dashboard" : "/home", { replace: true });
+      const isStaff = user.roles.some((role) =>
+        ["admin_role", "manager_role", "employee_role", "cashier_role", "admin", "employee"].includes(role)
+      );
+      navigate(isStaff ? "/dashboard" : "/home", { replace: true });
     }
   }, [loading, navigate, user]);
 

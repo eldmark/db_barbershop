@@ -9,6 +9,7 @@ export async function apiFetch<T>(
   options: ApiOptions = {}
 ): Promise<T> {
   const { token, headers, body, ...rest } = options;
+  void token;
 
   const finalHeaders: Record<string, string> = {
     ...(headers as Record<string, string>),
@@ -19,10 +20,6 @@ export async function apiFetch<T>(
     finalHeaders["Content-Type"] = "application/json";
   }
 
-  if (token) {
-    finalHeaders["Authorization"] = `Bearer ${token}`;
-  }
-
   let response: Response;
 
   try {
@@ -30,6 +27,7 @@ export async function apiFetch<T>(
       ...rest,
       headers: finalHeaders,
       body,
+      credentials: "include",
     });
   } catch (err) {
     throw new Error("Network error. Please check your connection.", { cause: err });

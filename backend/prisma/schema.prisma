@@ -1,0 +1,179 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Role {
+  id_role          Int              @id @default(autoincrement())
+  name             String           @unique @db.VarChar(50)
+  user_roles       UserRole[]
+  role_permissions RolePermission[]
+
+  @@map("role")
+}
+
+model UserAccount {
+  id_user                   Int           @id @default(autoincrement())
+  name                      String        @db.VarChar(100)
+  email                     String        @unique @db.VarChar(100)
+  password                  String        @db.VarChar(255)
+  created_at                DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?     @db.Timestamp(6)
+  deleted_at                DateTime?     @db.Timestamp(6)
+  user_roles                UserRole[]
+  sessions                  Session[]
+  client_reservations       Reservation[] @relation("ReservationClient")
+  employee_reservations     Reservation[] @relation("ReservationEmployee")
+  client_sales              Sale[]        @relation("SaleClient")
+  employee_sales            Sale[]        @relation("SaleEmployee")
+
+  @@map("user_account")
+}
+
+model Permission {
+  id_permission    Int              @id @default(autoincrement())
+  name             String           @unique @db.VarChar(100)
+  role_permissions RolePermission[]
+
+  @@map("permission")
+}
+
+model UserRole {
+  id_user Int
+  id_role Int
+  user    UserAccount @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  role    Role        @relation(fields: [id_role], references: [id_role], onDelete: Cascade)
+
+  @@id([id_user, id_role])
+  @@map("user_role")
+}
+
+model RolePermission {
+  id_role       Int
+  id_permission Int
+  role          Role       @relation(fields: [id_role], references: [id_role], onDelete: Cascade)
+  permission    Permission @relation(fields: [id_permission], references: [id_permission], onDelete: Cascade)
+
+  @@id([id_role, id_permission])
+  @@map("role_permission")
+}
+
+model Session {
+  id         String      @id @db.Uuid
+  id_user    Int
+  expires_at DateTime    @db.Timestamp(6)
+  created_at DateTime?   @default(now()) @db.Timestamp(6)
+  user       UserAccount @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@index([id_user])
+  @@index([expires_at])
+  @@map("app_session")
+}
+
+model Category {
+  id_category Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  products    Product[]
+
+  @@map("category")
+}
+
+model Supplier {
+  id_supplier Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  contact     String?   @db.VarChar(100)
+  products    Product[]
+
+  @@map("supplier")
+}
+
+model Service {
+  id_service          Int                 @id @default(autoincrement())
+  name                String              @db.VarChar(100)
+  price               Decimal             @db.Decimal(10, 2)
+  reservations        Reservation[]
+  sale_detail_service SaleDetailService[]
+
+  @@map("service")
+}
+
+model Product {
+  id_product          Int                 @id @default(autoincrement())
+  name                String              @db.VarChar(100)
+  price               Decimal             @db.Decimal(10, 2)
+  stock               Int
+  id_category         Int
+  id_supplier         Int
+  category            Category            @relation(fields: [id_category], references: [id_category])
+  supplier            Supplier            @relation(fields: [id_supplier], references: [id_supplier])
+  sale_detail_product SaleDetailProduct[]
+
+  @@map("product")
+}
+
+model Reservation {
+  id_reservation Int         @id @default(autoincrement())
+  date           DateTime    @db.Date
+  time           DateTime    @db.Time(6)
+  status         String      @db.VarChar(20)
+  id_user        Int
+  id_employee    Int
+  id_service     Int
+  created_at     DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?   @db.Timestamp(6)
+  deleted_at     DateTime?   @db.Timestamp(6)
+  user           UserAccount @relation("ReservationClient", fields: [id_user], references: [id_user])
+  employee       UserAccount @relation("ReservationEmployee", fields: [id_employee], references: [id_user])
+  service        Service     @relation(fields: [id_service], references: [id_service])
+  sales          Sale[]
+
+  @@map("reservation")
+}
+
+model Sale {
+  id_sale             Int                 @id @default(autoincrement())
+  date                DateTime            @db.Date
+  total               Decimal?            @db.Decimal(10, 2)
+  id_user             Int
+  id_employee         Int
+  id_reservation      Int?
+  created_at          DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?           @db.Timestamp(6)
+  deleted_at          DateTime?           @db.Timestamp(6)
+  user                UserAccount         @relation("SaleClient", fields: [id_user], references: [id_user])
+  employee            UserAccount         @relation("SaleEmployee", fields: [id_employee], references: [id_user])
+  reservation         Reservation?        @relation(fields: [id_reservation], references: [id_reservation])
+  sale_detail_product SaleDetailProduct[]
+  sale_detail_service SaleDetailService[]
+
+  @@map("sale")
+}
+
+model SaleDetailProduct {
+  id_sale_detail_product Int     @id @default(autoincrement())
+  id_sale                Int
+  id_product             Int
+  quantity               Int
+  unit_price             Decimal @db.Decimal(10, 2)
+  sale                   Sale    @relation(fields: [id_sale], references: [id_sale], onDelete: Cascade)
+  product                Product @relation(fields: [id_product], references: [id_product])
+
+  @@map("sale_detail_product")
+}
+
+model SaleDetailService {
+  id_sale_detail_service Int     @id @default(autoincrement())
+  id_sale                Int
+  id_service             Int
+  quantity               Int
+  unit_price             Decimal @db.Decimal(10, 2)
+  sale                   Sale    @relation(fields: [id_sale], references: [id_sale], onDelete: Cascade)
+  service                Service @relation(fields: [id_service], references: [id_service])
+
+  @@map("sale_detail_service")
+}

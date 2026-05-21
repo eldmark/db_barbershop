@@ -1,23 +1,96 @@
-import { query } from "../../utils/db";
+import { prisma } from "../../config/prisma";
 import { Reservation } from "../../types/entities";
 
-export const getReservations = async () => query(`
-  SELECT r.*, u.name as user_name, e.name as employee_name, s.name as service_name
-  FROM reservation r
-  JOIN user_account u ON r.id_user = u.id_user
-  JOIN user_account e ON r.id_employee = e.id_user
-  JOIN service s ON r.id_service = s.id_service
-  WHERE r.deleted_at IS NULL
-`);
+const reservationInclude = {
+  user: true,
+  employee: true,
+  service: true
+};
 
-export const getReservationById = async (id: number) => query(`
-  SELECT r.*, u.name as user_name, e.name as employee_name, s.name as service_name
-  FROM reservation r
-  JOIN user_account u ON r.id_user = u.id_user
-  JOIN user_account e ON r.id_employee = e.id_user
-  JOIN service s ON r.id_service = s.id_service
-  WHERE r.id_reservation = $1 AND r.deleted_at IS NULL
-`, [id]);
-export const createReservation = async (r: Reservation) => query(`INSERT INTO reservation (date, time, status, id_user, id_employee, id_service) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [r.date, r.time, r.status, r.id_user, r.id_employee, r.id_service]);
-export const updateReservation = async (id: number, r: Reservation) => query(`UPDATE reservation SET date=$1, time=$2, status=$3, id_user=$4, id_employee=$5, id_service=$6 WHERE id_reservation=$7 RETURNING *`, [r.date, r.time, r.status, r.id_user, r.id_employee, r.id_service, id]);
-export const deleteReservation = async (id: number) => query(`UPDATE reservation SET deleted_at = NOW() WHERE id_reservation = $1`, [id]);
+const toDateOnly = (date: string | Date) => {
+  if (date instanceof Date) return date;
+  return new Date(`${date.split("T")[0]}T00:00:00.000Z`);
+};
+
+const toTimeOnly = (time: string | Date) => {
+  if (time instanceof Date) return time;
+  const normalized = time.length === 5 ? `${time}:00` : time;
+  return new Date(`1970-01-01T${normalized.replace(/Z$/, "")}.000Z`);
+};
+
+const formatDate = (date: unknown) => {
+  if (date instanceof Date) return date.toISOString().slice(0, 10);
+  return String(date);
+};
+
+const formatTime = (time: unknown) => {
+  if (time instanceof Date) return time.toISOString().slice(11, 19);
+  return String(time);
+};
+
+const serializeReservation = (reservation: any) => ({
+  ...reservation,
+  date: formatDate(reservation.date),
+  time: formatTime(reservation.time),
+  user_name: reservation.user?.name,
+  employee_name: reservation.employee?.name,
+  service_name: reservation.service?.name
+});
+
+export const getReservations = async () => {
+  const reservations = await prisma.reservation.findMany({
+    where: { deleted_at: null },
+    include: reservationInclude,
+    orderBy: { id_reservation: "asc" }
+  });
+  return reservations.map(serializeReservation);
+};
+
+export const getReservationById = async (id: number) => {
+  const reservation = await prisma.reservation.findFirst({
+    where: {
+      id_reservation: id,
+      deleted_at: null
+    },
+    include: reservationInclude
+  });
+  return reservation ? serializeReservation(reservation) : null;
+};
+
+export const createReservation = async (r: Reservation) => {
+  const reservation = await prisma.reservation.create({
+    data: {
+      date: toDateOnly(r.date),
+      time: toTimeOnly(r.time),
+      status: r.status,
+      id_user: r.id_user,
+      id_employee: r.id_employee,
+      id_service: r.id_service
+    }
+  });
+  return serializeReservation(reservation);
+};
+
+export const updateReservation = async (id: number, r: Reservation) => {
+  const reservation = await prisma.reservation.update({
+    where: { id_reservation: id },
+    data: {
+      date: toDateOnly(r.date),
+      time: toTimeOnly(r.time),
+      status: r.status,
+      id_user: r.id_user,
+      id_employee: r.id_employee,
+      id_service: r.id_service,
+      updated_at: new Date()
+    }
+  });
+  return serializeReservation(reservation);
+};
+
+export const deleteReservation = async (id: number) => {
+  await prisma.reservation.update({
+    where: { id_reservation: id },
+    data: { deleted_at: new Date() }
+  });
+  return { success: true };
+};

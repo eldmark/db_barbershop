@@ -1,8 +1,45 @@
-import { query } from "../../utils/db";
+import { prisma } from "../../config/prisma";
 import { ServiceEntity } from "../../types/entities";
 
-export const getServices = async () => query(`SELECT * FROM service`);
-export const getServiceById = async (id: number) => query(`SELECT * FROM service WHERE id_service = $1`, [id]);
-export const createService = async (s: ServiceEntity) => query(`INSERT INTO service (name, price) VALUES ($1, $2) RETURNING *`, [s.name, s.price]);
-export const updateService = async (id: number, s: ServiceEntity) => query(`UPDATE service SET name=$1, price=$2 WHERE id_service=$3 RETURNING *`, [s.name, s.price, id]);
-export const deleteService = async (id: number) => query(`DELETE FROM service WHERE id_service = $1`, [id]);
+const serializeService = (service: any) => ({
+  ...service,
+  price: service.price?.toString?.() ?? service.price
+});
+
+export const getServices = async () => {
+  const services = await prisma.service.findMany({
+    orderBy: { id_service: "asc" }
+  });
+  return services.map(serializeService);
+};
+
+export const getServiceById = async (id: number) => {
+  const service = await prisma.service.findUnique({ where: { id_service: id } });
+  return service ? serializeService(service) : null;
+};
+
+export const createService = async (s: ServiceEntity) => {
+  const service = await prisma.service.create({
+    data: {
+      name: s.name,
+      price: s.price
+    }
+  });
+  return serializeService(service);
+};
+
+export const updateService = async (id: number, s: ServiceEntity) => {
+  const service = await prisma.service.update({
+    where: { id_service: id },
+    data: {
+      name: s.name,
+      price: s.price
+    }
+  });
+  return serializeService(service);
+};
+
+export const deleteService = async (id: number) => {
+  await prisma.service.delete({ where: { id_service: id } });
+  return { success: true };
+};
