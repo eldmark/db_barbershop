@@ -14,7 +14,6 @@ import { registerSaleDetailProductRoutes } from "./modules/saleDetailProduct/sal
 import { registerSaleDetailServiceRoutes } from "./modules/saleDetailService/saleDetailService.routes";
 import { registerAuthRoutes } from "./modules/auth/auth.routes";
 import { pool } from "./config/db";
-import bcrypt from "bcrypt";
 const port = process.env.PORT || 3000;
 
 const app = new Elysia().use(
@@ -24,12 +23,13 @@ const app = new Elysia().use(
 			return true;
 		},
 		methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-		allowedHeaders: ["Content-Type", "Authorization"]
+		allowedHeaders: ["Content-Type", "Authorization"],
+		credentials: true
 	})
 );
 
 app.onError(({ code, error }) => {
-	if (error?.message === "Missing token" || error?.message === "Invalid token") {
+	if (error?.message === "Missing session" || error?.message === "Invalid session") {
 		return new Response(JSON.stringify({ error: error.message }), {
 			status: 401,
 			headers: { "Content-Type": "application/json" }

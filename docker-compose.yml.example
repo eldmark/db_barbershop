@@ -5,16 +5,16 @@ services:
     container_name: barber_db
     restart: always
     environment:
-      POSTGRES_USER: proy2
+      POSTGRES_USER: proy3
       POSTGRES_PASSWORD: secret
-      POSTGRES_DB: barberdb
+      POSTGRES_DB: barbershop
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U proy2"]
+      test: ["CMD-SHELL", "pg_isready -U proy3 -d barbershop"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,10 +29,11 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: proy2
+      DB_USER: proy3
       DB_PASSWORD: secret
-      DB_NAME: barberdb
-      JWT_SECRET: your-secret-key-here-min-32-chars
+      DB_NAME: barbershop
+      DATABASE_URL: postgresql://proy3:secret@db:5432/barbershop
+      SESSION_SECRET: super_secret_session
     ports:
       - "3000:3000"
     volumes:

@@ -8,6 +8,8 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 
+RUN bun run prisma:generate
+
 ENV NODE_ENV=production
 
 EXPOSE 3000
