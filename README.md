@@ -3,8 +3,8 @@
 > Full-stack database project for a barber shop appointment and inventory management system. Features JWT authentication with role-based access control, real-time reservations, product inventory, and service management.
 > Production link: http://136.113.119.228/
 
-
 **Table of Contents**
+
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Features](#features)
@@ -27,6 +27,7 @@
 ## Overview
 
 This is a complete **Full-Stack** management system for barbershops that streamlines:
+
 - 📅 **Appointment Scheduling** - Customers book services, employees manage reservations
 - 📦 **Inventory Management** - Track products, stock levels, categories, suppliers
 - 💰 **Sales & Billing** - Complete transaction history, invoice generation, intelligent billing from reservations
@@ -40,6 +41,7 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
 ## Tech Stack
 
 ### Backend
+
 - **Runtime**: Bun (high-performance JavaScript runtime)
 - **Framework**: ElysiaJS (lightweight TypeScript web framework)
 - **Database**: PostgreSQL 15
@@ -53,6 +55,7 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
   - `pg` - PostgreSQL client
 
 ### Frontend
+
 - **Library**: React 18.2+
 - **Build Tool**: Vite 8
 - **Language**: TypeScript
@@ -62,15 +65,37 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
 - **Linting**: ESLint
 
 ### Infrastructure
+
 - **Containerization**: Docker + Docker Compose
 - **Database**: PostgreSQL 15 Alpine
 - **Network**: Bridge network for container communication
 
 ---
 
+## Prisma (ORM)
+
+- **ORM used**: Prisma (TypeScript)
+- **Prisma schema**: [backend/prisma/schema.prisma](backend/prisma/schema.prisma#L1)
+- **Generated client**: [backend/generated/prisma/client.ts](backend/generated/prisma/client.ts#L1) — the app imports the client via [backend/config/prisma.ts](backend/config/prisma.ts#L1).
+- **Environment variable**: `DATABASE_URL` (example: `postgresql://proy3:secret@db:5432/barbershop`). See `.env.example` for the project values.
+- **Common developer commands**:
+  - Install: `bun add prisma @prisma/client`
+  - Initialize Prisma: `bunx prisma init`
+  - Generate client after schema changes: `bunx prisma generate`
+  - Create a migration (dev): `bunx prisma migrate dev --name init`
+  - Apply migrations (production): `bunx prisma migrate deploy`
+  - Sync schema without migrations: `bunx prisma db push`
+- **Usage notes**:
+  - Server code obtains the Prisma client from [backend/config/prisma.ts](backend/config/prisma.ts#L1).
+  - Use `prisma.$transaction([...])` for explicit multi-step transactions in services.
+  - Execute stored procedures or raw SQL with `prisma.$executeRaw` / `prisma.$queryRaw` when necessary (reports, complex joins, stored procedures defined in `db/init.sql`).
+  - Demo seeding is available via [backend/src/modules/auth/setupDemo.ts](backend/src/modules/auth/setupDemo.ts#L1) and the DB init script `db/init.sql`.
+  - After editing `schema.prisma`, run `bunx prisma generate` and restart the backend service to pick up types and client changes.
+
 ## Features
 
 ### 👤 User Management & Authentication
+
 - ✅ User registration with email validation
 - ✅ JWT-based login system
 - ✅ Bcrypt password hashing
@@ -79,6 +104,7 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
 - ✅ Auto-generated demo users for testing
 
 ### 📅 Reservation System
+
 - ✅ Book appointments with employee selection
 - ✅ Choose from available services
 - ✅ Automatic employee assignment (if not specified)
@@ -87,6 +113,7 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
 - ✅ Link reservations directly to sales for seamless billing
 
 ### 📦 Inventory Management
+
 - ✅ Add, update, and delete products
 - ✅ Automatic stock tracking with triggers
 - ✅ Categorize products
@@ -95,11 +122,13 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
 - ✅ Product analytics
 
 ### 💇 Service Management
+
 - ✅ Create and manage haircut/salon services
 - ✅ Set service pricing
 - ✅ Browse service catalog
 
 ### 💰 Sales & Billing
+
 - ✅ Intelligent billing workflow (Reservation → Sale)
 - ✅ Multiple products/services per transaction
 - ✅ Automatic inventory reduction on sale
@@ -108,6 +137,7 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
 - ✅ Detailed sale reports with joins
 
 ### 📊 Analytics & Dashboards
+
 - ✅ Real-time KPIs (today's revenue, weekly revenue)
 - ✅ Low-stock alerts
 - ✅ Top-selling products (GROUP BY / HAVING)
@@ -116,6 +146,7 @@ The system uses a **PostgreSQL database** normalized to 3NF with advanced SQL fe
 - ✅ CSV export functionality
 
 ### 🔐 Security
+
 - ✅ JWT token-based authentication
 - ✅ Password hashing with Bcrypt
 - ✅ Role-based endpoint access guards
@@ -269,21 +300,21 @@ db_barbershop/
 
 #### Entities & Relationships
 
-| Table | Purpose | Key Fields |
-|-------|---------|-----------|
-| **User** | Customers and Employees | id_user, name, email, password_hash, deleted_at |
-| **Role** | RBAC roles | id_role, role_name (admin, employee, client) |
-| **UserRole** | User-Role mapping | id_user, id_role |
-| **Permission** | Fine-grained access control | id_permission, permission_name |
-| **RolePermission** | Role-Permission mapping | id_role, id_permission |
-| **Product** | Inventory items | id_product, name, price, stock, id_category, id_supplier |
-| **Category** | Product categories | id_category, category_name |
-| **Supplier** | Product suppliers | id_supplier, supplier_name, contact_info |
-| **Service** | Salon services | id_service, name, price |
-| **Reservation** | Appointments | id_reservation, date, time, status, id_user, id_employee, id_service |
-| **Sale** | Transactions | id_sale, date, total, id_user, id_employee, id_reservation |
-| **SaleDetailProduct** | Sale line items (products) | id_sale_detail, id_sale, id_product, quantity, unit_price |
-| **SaleDetailService** | Sale line items (services) | id_sale_detail, id_sale, id_service, quantity, unit_price |
+| Table                 | Purpose                     | Key Fields                                                           |
+| --------------------- | --------------------------- | -------------------------------------------------------------------- |
+| **User**              | Customers and Employees     | id_user, name, email, password_hash, deleted_at                      |
+| **Role**              | RBAC roles                  | id_role, role_name (admin, employee, client)                         |
+| **UserRole**          | User-Role mapping           | id_user, id_role                                                     |
+| **Permission**        | Fine-grained access control | id_permission, permission_name                                       |
+| **RolePermission**    | Role-Permission mapping     | id_role, id_permission                                               |
+| **Product**           | Inventory items             | id_product, name, price, stock, id_category, id_supplier             |
+| **Category**          | Product categories          | id_category, category_name                                           |
+| **Supplier**          | Product suppliers           | id_supplier, supplier_name, contact_info                             |
+| **Service**           | Salon services              | id_service, name, price                                              |
+| **Reservation**       | Appointments                | id_reservation, date, time, status, id_user, id_employee, id_service |
+| **Sale**              | Transactions                | id_sale, date, total, id_user, id_employee, id_reservation           |
+| **SaleDetailProduct** | Sale line items (products)  | id_sale_detail, id_sale, id_product, quantity, unit_price            |
+| **SaleDetailService** | Sale line items (services)  | id_sale_detail, id_sale, id_service, quantity, unit_price            |
 
 #### Normalization to 3FN
 
@@ -298,20 +329,25 @@ db_barbershop/
 #### Advanced SQL Features
 
 **Triggers**:
+
 - `trg_update_stock_after_sale`: Automatically reduces product stock when a sale is created
 
 **Stored Procedures**:
+
 - `pr_complete_reservation`: Marks reservation as completed (ensures atomicity)
 
 **Views**:
+
 - `active_users`: Filters users with `deleted_at IS NULL`
 - `active_sales`: Filters sales not soft-deleted
 
 **CTEs (Common Table Expressions)**:
+
 - Used in dashboard queries for complex revenue calculations
 - Daily/weekly aggregations with GROUP BY
 
 **Aggregations**:
+
 - GROUP BY / HAVING for top-selling products
 - SUM for revenue calculations
 - COUNT for active customers
@@ -323,6 +359,7 @@ db_barbershop/
 ### Environment Variables
 
 #### Root `.env` (Docker Compose)
+
 ```env
 # Database Configuration
 DB_HOST=db
@@ -340,6 +377,7 @@ VITE_API_URL=http://localhost:3000
 ```
 
 #### Backend `.env` (Local Development)
+
 ```env
 # Database
 DB_HOST=localhost
@@ -357,6 +395,7 @@ JWT_SECRET=your-secret-key-here
 ```
 
 #### Frontend `.env` (Vite)
+
 ```env
 VITE_API_URL=http://localhost:3000
 ```
@@ -405,11 +444,13 @@ cd db_barbershop
 ### Method 1: Docker Compose (Recommended)
 
 1. **Create environment file:**
+
    ```bash
    cp .env.example .env
    ```
 
 2. **Build and start services:**
+
    ```bash
    docker-compose up --build
    ```
@@ -427,6 +468,7 @@ cd db_barbershop
 ### Method 2: Local Development (Without Docker)
 
 #### 1. Set up PostgreSQL Database
+
 ```bash
 # Create database
 createdb barberdb
@@ -436,6 +478,7 @@ psql -U postgres barberdb < db/init.sql
 ```
 
 #### 2. Backend Setup
+
 ```bash
 cd backend
 
@@ -448,9 +491,11 @@ bun install
 # Start development server
 bun run dev
 ```
+
 Server runs on: http://localhost:3000
 
 #### 3. Frontend Setup
+
 ```bash
 cd ../frontend
 
@@ -463,6 +508,7 @@ npm install
 # Start development server
 npm run dev
 ```
+
 App runs on: http://localhost:5173
 
 ---
@@ -472,11 +518,13 @@ App runs on: http://localhost:5173
 ### 1. Start the Application
 
 **With Docker:**
+
 ```bash
 docker-compose up --build
 ```
 
 **Locally:**
+
 ```bash
 # Terminal 1: Backend
 cd backend && bun run dev
@@ -520,6 +568,7 @@ Client:
 ## API Documentation
 
 ### Base URL
+
 ```
 http://localhost:3000
 ```
@@ -527,6 +576,7 @@ http://localhost:3000
 ### Authentication
 
 All endpoints (except `/auth/*` and public endpoints) require:
+
 ```
 Authorization: Bearer <JWT_TOKEN>
 ```
@@ -536,6 +586,7 @@ Obtain token via `/auth/login`.
 ### Auth Endpoints
 
 #### Register
+
 ```http
 POST /auth/register
 Content-Type: application/json
@@ -558,6 +609,7 @@ Response 201:
 ```
 
 #### Login
+
 ```http
 POST /auth/login
 Content-Type: application/json
@@ -582,6 +634,7 @@ Response 200:
 ### Product Endpoints
 
 #### Get All Products
+
 ```http
 GET /products
 Authorization: Bearer <TOKEN>
@@ -601,6 +654,7 @@ Response 200:
 ```
 
 #### Create Product (Employee/Admin)
+
 ```http
 POST /products
 Authorization: Bearer <TOKEN>
@@ -624,6 +678,7 @@ Response 201:
 ```
 
 #### Update Product (Employee/Admin)
+
 ```http
 PUT /products/:id
 Authorization: Bearer <TOKEN>
@@ -644,6 +699,7 @@ Response 200:
 ```
 
 #### Delete Product (Admin)
+
 ```http
 DELETE /products/:id
 Authorization: Bearer <TOKEN>
@@ -657,6 +713,7 @@ Response 200:
 ### Service Endpoints
 
 #### Get All Services
+
 ```http
 GET /services
 Authorization: Bearer <TOKEN>
@@ -678,6 +735,7 @@ Response 200:
 ```
 
 #### Create Service (Employee/Admin)
+
 ```http
 POST /services
 Authorization: Bearer <TOKEN>
@@ -699,6 +757,7 @@ Response 201:
 ### Reservation Endpoints
 
 #### Get All Reservations
+
 ```http
 GET /reservations
 Authorization: Bearer <TOKEN>
@@ -719,6 +778,7 @@ Response 200:
 ```
 
 #### Create Reservation
+
 ```http
 POST /reservations
 Authorization: Bearer <TOKEN>
@@ -742,6 +802,7 @@ Response 201:
 ```
 
 #### Complete Reservation (Employee/Admin)
+
 ```http
 PUT /reservations/:id
 Authorization: Bearer <TOKEN>
@@ -761,6 +822,7 @@ Response 200:
 ### Sale Endpoints
 
 #### Get All Sales
+
 ```http
 GET /sales
 Authorization: Bearer <TOKEN>
@@ -779,6 +841,7 @@ Response 200:
 ```
 
 #### Create Sale (Employee/Admin)
+
 ```http
 POST /sales
 Authorization: Bearer <TOKEN>
@@ -816,6 +879,7 @@ Response 201:
 ### Dashboard/Analytics Endpoints
 
 #### Sales Summary (KPIs)
+
 ```http
 GET /sales/summary
 Authorization: Bearer <TOKEN>
@@ -829,6 +893,7 @@ Response 200:
 ```
 
 #### Top Selling Products
+
 ```http
 GET /sales/top-products
 Authorization: Bearer <TOKEN>
@@ -845,6 +910,7 @@ Response 200:
 ```
 
 #### Active Customers
+
 ```http
 GET /sales/active-customers
 Authorization: Bearer <TOKEN>
@@ -933,6 +999,7 @@ Response 200:
 ### Backend Development
 
 #### File Structure
+
 ```
 backend/
 ├── src/
@@ -958,6 +1025,7 @@ backend/
 #### Key Files
 
 **[backend/src/index.ts](backend/src/index.ts)** - Server bootstrap:
+
 ```typescript
 import { Elysia } from "elysia";
 import { setupDemo } from "./modules/auth/setupDemo";
@@ -974,15 +1042,18 @@ await setupDemo();
 ```
 
 **[backend/src/middleware/auth.ts](backend/src/middleware/auth.ts)** - Authentication:
+
 ```typescript
 export const createAuthGuard = () => {
   return {
     async beforeHandle({ request }) {
-      const token = request.headers.get("Authorization")?.replace("Bearer ", "");
+      const token = request.headers
+        .get("Authorization")
+        ?.replace("Bearer ", "");
       if (!token) throw new Error("Unauthorized");
       const decoded = verify(token, process.env.JWT_SECRET!);
       return { user: decoded };
-    }
+    },
   };
 };
 
@@ -993,7 +1064,7 @@ export const createRoleGuard = (allowedRoles: string[]) => {
       if (!allowedRoles.includes(user.role)) {
         throw new Error("Forbidden");
       }
-    }
+    },
   };
 };
 ```
@@ -1001,17 +1072,20 @@ export const createRoleGuard = (allowedRoles: string[]) => {
 #### Running Backend
 
 **Development:**
+
 ```bash
 cd backend
 bun run dev        # Watch mode, auto-reload on changes
 ```
 
 **Production:**
+
 ```bash
 bun run src/index.ts
 ```
 
 **Testing:**
+
 ```bash
 bun test
 ```
@@ -1021,6 +1095,7 @@ bun test
 ### Frontend Development
 
 #### File Structure
+
 ```
 frontend/src/
 ├── main.tsx                    # Vite entry point
@@ -1049,10 +1124,11 @@ frontend/src/
 #### Key Files
 
 **[frontend/src/hooks/useAuth.ts](frontend/src/hooks/useAuth.ts)** - Authentication hook:
+
 ```typescript
 export const useAuth = () => {
   const { user, login, logout } = useContext(AuthContext);
-  
+
   return {
     user,
     login: (email: string, password: string) => {
@@ -1060,12 +1136,13 @@ export const useAuth = () => {
     },
     logout: () => {
       // Clear token, reset context
-    }
+    },
   };
 };
 ```
 
 **[frontend/src/services/api.ts](frontend/src/services/api.ts)** - API client with JWT:
+
 ```typescript
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
@@ -1081,6 +1158,7 @@ export default api;
 ```
 
 **[frontend/src/router/AppRouter.tsx](frontend/src/router/AppRouter.tsx)** - Protected routes:
+
 ```typescript
 <Routes>
   <Route element={<ProtectedRoute roles={["client"]} />}>
@@ -1096,22 +1174,26 @@ export default api;
 #### Running Frontend
 
 **Development:**
+
 ```bash
 cd frontend
 npm run dev       # Vite dev server on http://localhost:5173
 ```
 
 **Build:**
+
 ```bash
 npm run build     # Optimized production build in dist/
 ```
 
 **Lint:**
+
 ```bash
 npm run lint      # ESLint checks
 ```
 
 **Test:**
+
 ```bash
 npm run test      # Vitest with React Testing Library
 ```
@@ -1123,12 +1205,14 @@ npm run test      # Vitest with React Testing Library
 Example: Adding a "Review" feature
 
 #### 1. Create Module Structure
+
 ```bash
 mkdir -p backend/src/modules/review
 touch backend/src/modules/review/{review.routes.ts,review.controller.ts,review.service.ts,types.ts}
 ```
 
 #### 2. Define Types
+
 ```typescript
 // review/types.ts
 export interface Review {
@@ -1142,14 +1226,14 @@ export interface Review {
 ```
 
 #### 3. Create Service (Business Logic)
+
 ```typescript
 // review/review.service.ts
 export class ReviewService {
   async getReviews(id_service: number) {
-    const result = await query(
-      `SELECT * FROM Review WHERE id_service = $1`,
-      [id_service]
-    );
+    const result = await query(`SELECT * FROM Review WHERE id_service = $1`, [
+      id_service,
+    ]);
     return result.rows;
   }
 
@@ -1160,6 +1244,7 @@ export class ReviewService {
 ```
 
 #### 4. Create Controller (Request Handler)
+
 ```typescript
 // review/review.controller.ts
 export class ReviewController {
@@ -1176,6 +1261,7 @@ export class ReviewController {
 ```
 
 #### 5. Create Routes
+
 ```typescript
 // review/review.routes.ts
 import { Elysia } from "elysia";
@@ -1184,11 +1270,12 @@ import { ReviewController } from "./review.controller";
 export const ReviewRoutes = new Elysia({ prefix: "/reviews" })
   .get("/:id_service", ReviewController.prototype.getReviews)
   .post("/", ReviewController.prototype.createReview, {
-    guard: createAuthGuard()
+    guard: createAuthGuard(),
   });
 ```
 
 #### 6. Register in Main App
+
 ```typescript
 // src/app.ts
 import { ReviewRoutes } from "./modules/review/review.routes";
@@ -1210,6 +1297,7 @@ bun test
 Tests located in `backend/src/tests/`
 
 **Example:**
+
 ```typescript
 // utils.test.ts
 import { expect, test } from "bun:test";
@@ -1232,6 +1320,7 @@ npm run test
 Tests located in `frontend/src/tests/` using Vitest + React Testing Library
 
 **Example:**
+
 ```typescript
 // Button.test.tsx
 import { render, screen } from "@testing-library/react";
@@ -1255,6 +1344,7 @@ test("renders button with text", () => {
    - Update API URL
 
 2. **Build and deploy:**
+
    ```bash
    docker-compose up --build -d
    ```
@@ -1266,12 +1356,14 @@ test("renders button with text", () => {
 ### Cloud Deployment (Example: AWS EC2)
 
 1. **Build images:**
+
    ```bash
    docker build -t barber-api:latest ./backend
    docker build -t barber-frontend:latest ./frontend
    ```
 
 2. **Push to registry:**
+
    ```bash
    docker tag barber-api:latest your-registry/barber-api:latest
    docker push your-registry/barber-api:latest
@@ -1290,7 +1382,9 @@ test("renders button with text", () => {
 **Error: `connect ECONNREFUSED 127.0.0.1:5432`**
 
 **Solution:**
+
 1. Check PostgreSQL is running:
+
    ```bash
    # Docker
    docker ps | grep postgres
@@ -1311,12 +1405,15 @@ test("renders button with text", () => {
 **Error: `Unauthorized - Invalid token`**
 
 **Solution:**
+
 1. Ensure token is in Authorization header:
+
    ```
    Authorization: Bearer eyJhbGciOi...
    ```
 
 2. Check token expiration:
+
    ```bash
    # Decode token (use jwt.io or similar)
    ```
@@ -1328,6 +1425,7 @@ test("renders button with text", () => {
 **Error: `Port 3000 already in use`**
 
 **Solution:**
+
 ```bash
 # Find process using port
 lsof -i :3000
@@ -1344,7 +1442,9 @@ PORT=3001 bun run dev
 **Error: `failed to solve with frontend dockerfile`**
 
 **Solution:**
+
 1. Clear Docker cache:
+
    ```bash
    docker system prune -a
    ```
@@ -1361,12 +1461,15 @@ PORT=3001 bun run dev
 **Issue: Products stock doesn't decrease after sale**
 
 **Check:**
+
 1. Trigger `trg_update_stock_after_sale` is enabled:
+
    ```sql
    SELECT * FROM pg_trigger WHERE tgname = 'trg_update_stock_after_sale';
    ```
 
 2. Sale detail products are correctly inserted:
+
    ```sql
    SELECT * FROM SaleDetailProduct WHERE id_sale = ?;
    ```
@@ -1380,6 +1483,7 @@ PORT=3001 bun run dev
 ### Workflow
 
 1. **Create feature branch:**
+
    ```bash
    git checkout -b feature/new-feature
    ```
@@ -1390,6 +1494,7 @@ PORT=3001 bun run dev
    - Update documentation
 
 3. **Test:**
+
    ```bash
    # Backend
    cd backend && bun test
@@ -1399,6 +1504,7 @@ PORT=3001 bun run dev
    ```
 
 4. **Commit:**
+
    ```bash
    git commit -m "feat: add new feature"
    ```
@@ -1432,10 +1538,12 @@ PORT=3001 bun run dev
 ## Database Diagram
 
 See `/docs/` for ER diagrams:
+
 - `DERCSF.puml` (PlantUML format)
 - `DERchen.dot` (Graphviz format)
 
 1. **Build and start all services**:
+
    ```bash
    docker compose up --build
    ```
@@ -1453,12 +1561,14 @@ See `/docs/` for ER diagrams:
 ### Local Development
 
 1. **Install dependencies**:
+
    ```bash
    cd backend && bun install
    cd ../frontend && npm install
    ```
 
 2. **Start PostgreSQL** (requires Docker):
+
    ```bash
    docker run -d -p 5432:5432 \
      -e POSTGRES_USER=proy2 \
@@ -1468,11 +1578,13 @@ See `/docs/` for ER diagrams:
    ```
 
 3. **Initialize database**:
+
    ```bash
    psql -U proy2 -d barberdb -f db/init.sql
    ```
 
 4. **Start backend**:
+
    ```bash
    cd backend
    bun run src/index.ts
@@ -1489,6 +1601,7 @@ See `/docs/` for ER diagrams:
 ### Authentication Endpoints
 
 **POST /auth/register**
+
 ```json
 {
   "name": "John Doe",
@@ -1496,15 +1609,18 @@ See `/docs/` for ER diagrams:
   "password": "securepass123"
 }
 ```
+
 Response: User object + JWT token
 
 **POST /auth/login**
+
 ```json
 {
   "email": "john@example.com",
   "password": "securepass123"
 }
 ```
+
 Response: `{ user: {...}, token: "jwt..." }`
 
 ### Protected Endpoints
@@ -1545,6 +1661,7 @@ After starting the stack you can create demo users (admin, employee, client) by 
 GET http://localhost:3000/setup-demo
 
 ```
+
 This will create three users with password `password123`. To verify current users and roles, call:
 
 ```
