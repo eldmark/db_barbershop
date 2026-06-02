@@ -1,7 +1,7 @@
 # 🏪 Barber Shop Management System
 
 > Full-stack database project for a barber shop appointment and inventory management system. Features JWT authentication with role-based access control, real-time reservations, product inventory, and service management.
-> Production link: http://136.113.119.228/
+> Production link: http://34.71.234.176/
 
 
 **Table of Contents**
