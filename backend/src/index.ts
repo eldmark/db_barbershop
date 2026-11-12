@@ -15,6 +15,7 @@ import { registerSaleDetailServiceRoutes } from "./modules/saleDetailService/sal
 import { registerAuthRoutes } from "./modules/auth/auth.routes";
 import { pool } from "./config/db";
 import bcrypt from "bcrypt";
+const port = process.env.PORT || 3000;
 
 const app = new Elysia().use(
 	cors({
@@ -69,9 +70,9 @@ app.get("/debug/users", async () => {
 	try {
 		const res = await pool.query(
 			`SELECT u.id_user, u.name, u.email, COALESCE(json_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '[]') AS roles
-			 FROM "User" u
-			 LEFT JOIN UserRole ur ON u.id_user = ur.id_user
-			 LEFT JOIN Role r ON ur.id_role = r.id_role
+			 FROM user_account u
+			 LEFT JOIN user_role ur ON u.id_user = ur.id_user
+			 LEFT JOIN role r ON ur.id_role = r.id_role
 			 GROUP BY u.id_user, u.name, u.email`
 		);
 		return { users: res.rows };
@@ -96,7 +97,10 @@ app.get("/setup-demo", async () => {
 
 // Utility endpoint to correct demo user role mappings (temporary)
 // Temporary role-fix endpoint removed after verification.
-const server = app.listen(3000);
+const server = app.listen({
+	port: Number(port),
+	hostname: "0.0.0.0"
+});
 
 // Attempt to create demo users on startup (idempotent)
 void (async () => {

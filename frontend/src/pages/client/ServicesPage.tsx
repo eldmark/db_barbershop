@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 type ServiceEntity = {
   id_service?: number;
   name: string;
-  price: number;
+  price: number | string;
 };
 
 export default function ServicesPage() {
@@ -28,7 +28,7 @@ export default function ServicesPage() {
       }
     };
     void loadServices();
-  }, []);
+  }, [token]);
 
   return (
     <section className="flex flex-col gap-6">
@@ -42,7 +42,7 @@ export default function ServicesPage() {
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {error ? <p className="text-sm text-accent">{error}</p> : null}
           {services.map((service) => {
-            const priceNum = typeof service.price === "number" ? service.price : Number((service as any).price);
+            const priceNum = Number(service.price);
             const priceLabel = Number.isNaN(priceNum) ? "$0.00" : `$${priceNum.toFixed(2)}`;
             const isSelected = selectedService?.id_service === service.id_service;
             return (
@@ -75,7 +75,7 @@ export default function ServicesPage() {
             <div>
               <p className="text-sm text-content/60">Price</p>
               <p className="text-2xl font-semibold text-accent">
-                ${((typeof selectedService.price === "number" ? selectedService.price : Number((selectedService as any).price)) || 0).toFixed(2)}
+                ${(Number(selectedService.price) || 0).toFixed(2)}
               </p>
             </div>
             <Button onClick={() => navigate("/reservations")} variant="accent">

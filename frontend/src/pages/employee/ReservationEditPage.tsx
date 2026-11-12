@@ -33,7 +33,14 @@ export default function ReservationEditPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    date: string;
+    time: string;
+    status: Reservation["status"];
+    id_user: string;
+    id_employee: string;
+    id_service: string;
+  }>({
     date: "",
     time: "",
     status: "pending",
@@ -65,7 +72,7 @@ export default function ReservationEditPage() {
         setUsers(usersData);
         setEmployees(empsData);
         setServices(servsData);
-      } catch (err) {
+      } catch {
         setError("Request could not be completed");
       } finally {
         setLoading(false);
@@ -96,7 +103,7 @@ export default function ReservationEditPage() {
         })
       });
       navigate("/reservations");
-    } catch (err) {
+    } catch {
       setError("Request could not be completed");
     }
   };
@@ -137,7 +144,7 @@ export default function ReservationEditPage() {
             <select
               className="input"
               value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+              onChange={(e) => setForm({ ...form, status: e.target.value as Reservation["status"] })}
             >
               <option value="pending">Pending</option>
               <option value="completed">Completed</option>

@@ -50,7 +50,7 @@ export default function ProductEditPage() {
         ]);
         setCategories(Array.isArray(cats) ? cats : []);
         setSuppliers(Array.isArray(sups) ? sups : []);
-      } catch (err) {
+  } catch {
         setError("Request could not be completed");
       } finally {
         setLoading(false);
@@ -80,7 +80,7 @@ export default function ProductEditPage() {
         })
       });
       navigate("/products");
-    } catch (err) {
+    } catch {
       setError("Request could not be completed");
     }
   };

@@ -47,7 +47,7 @@ export default function DashboardPage() {
         setSummary(summaryData);
         setTopProducts(Array.isArray(topData) ? topData : []);
         setActiveCustomers(Array.isArray(customersData) ? customersData : []);
-      } catch (err) {
+      } catch {
         setError("Request could not be completed");
       } finally {
         setLoading(false);
@@ -106,7 +106,7 @@ export default function DashboardPage() {
                 { key: "total_sold", label: "Qty Sold", align: "center" },
                 { key: "total_revenue", label: "Revenue", align: "right", render: (v) => `$${Number(v).toFixed(2)}` }
               ]}
-              rows={topProducts as any}
+              rows={topProducts as unknown as Record<string, ReactNode>[]}
             />
           )}
         </div>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
                 { key: "name", label: "Name" },
                 { key: "email", label: "Email" }
               ]}
-              rows={activeCustomers as any}
+              rows={activeCustomers as unknown as Record<string, ReactNode>[]}
             />
           )}
         </div>

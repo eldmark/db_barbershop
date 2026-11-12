@@ -32,7 +32,7 @@ export async function apiFetch<T>(
       body,
     });
   } catch (err) {
-    throw new Error("Network error. Please check your connection.");
+    throw new Error("Network error. Please check your connection.", { cause: err });
   }
 
   // Manejo de errores HTTP
@@ -49,7 +49,9 @@ export async function apiFetch<T>(
       // fallback silencioso
     }
 
-    throw new Error(message);
+    const error = new Error(message) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
   }
 
   // 204 → no content
@@ -61,7 +63,7 @@ export async function apiFetch<T>(
   try {
     const data = await response.json();
     return data as T;
-  } catch {
-    throw new Error("Invalid response from server");
+  } catch (err) {
+    throw new Error("Invalid response from server", { cause: err });
   }
 }

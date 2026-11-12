@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionHeader from "../../components/common/SectionHeader";
 import DataTable from "../../components/common/DataTable";
@@ -19,7 +19,7 @@ type Reservation = {
   service_name?: string;
 };
 
-type User = { id_user: number; name: string };
+type User = { id_user: number; name: string; role?: number };
 type Employee = { id_employee: number; name: string };
 type Service = { id_service: number; name: string };
 
@@ -41,7 +41,7 @@ export default function ReservationsPage() {
     id_service: ""
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -53,11 +53,11 @@ export default function ReservationsPage() {
       setItems(Array.isArray(resData) ? resData : []);
       const allUsers = Array.isArray(usersData) ? usersData : [];
       // employees are users with role === 2
-      const onlyEmployees = allUsers.filter((u: any) => (u.role ?? 0) === 2).map((u: any) => ({ id_employee: u.id_user, name: u.name }));
-      setUsers(allUsers.filter((u: any) => (u.role ?? 0) !== 2));
+      const onlyEmployees = allUsers.filter((u: User) => (u.role ?? 0) === 2).map((u: User) => ({ id_employee: u.id_user, name: u.name }));
+      setUsers(allUsers.filter((u: User) => (u.role ?? 0) !== 2));
       setEmployees(onlyEmployees as Employee[]);
       setServices(Array.isArray(servsData) ? servsData : []);
-    } catch (err) {
+    } catch {
       setError("Request could not be completed");
       setItems([]);
       setUsers([]);
@@ -66,11 +66,15 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
-    void loadData();
-  }, []);
+    const fetch = async () => {
+      await Promise.resolve();
+      void loadData();
+    };
+    void fetch();
+  }, [loadData]);
 
   const handleCreate = async () => {
     if (!form.date || !form.time || !form.id_user || !form.id_employee || !form.id_service) {
@@ -93,7 +97,7 @@ export default function ReservationsPage() {
       });
       setForm({ date: "", time: "", status: "pending", id_user: "", id_employee: "", id_service: "" });
       await loadData();
-    } catch (err) {
+    } catch {
       setError("Request could not be completed");
     }
   };
@@ -103,7 +107,7 @@ export default function ReservationsPage() {
     try {
       await apiFetch<void>(`/reservations/${id}`, { method: "DELETE", token });
       await loadData();
-    } catch (err) {
+    } catch {
       setError("Request could not be completed");
     }
   };
@@ -174,7 +178,7 @@ export default function ReservationsPage() {
                 )
               }
             ]}
-            rows={rows as any}
+            rows={rows as unknown as Record<string, ReactNode>[]}
           />
         </div>
 

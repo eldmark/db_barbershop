@@ -17,7 +17,7 @@ export const createSale = async (sale: SaleInput) => {
     await client.query("BEGIN");
 
     const saleResult = await client.query(
-      `INSERT INTO Sale (date, total, id_user, id_employee, id_reservation)
+      `INSERT INTO sale (date, total, id_user, id_employee, id_reservation)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id_sale`,
       [sale.date, sale.total, sale.id_user, sale.id_employee, sale.id_reservation || null]
@@ -29,7 +29,7 @@ export const createSale = async (sale: SaleInput) => {
     if (sale.products && sale.products.length > 0) {
       for (const item of sale.products) {
         await client.query(
-          `INSERT INTO SaleDetailProduct (id_sale, id_product, quantity, unit_price)
+          `INSERT INTO sale_detail_product (id_sale, id_product, quantity, unit_price)
            VALUES ($1, $2, $3, $4)`,
           [saleId, item.id_product, item.quantity, item.unit_price]
         );
@@ -40,7 +40,7 @@ export const createSale = async (sale: SaleInput) => {
     if (sale.services && sale.services.length > 0) {
       for (const item of sale.services) {
         await client.query(
-          `INSERT INTO SaleDetailService (id_sale, id_service, quantity, unit_price)
+          `INSERT INTO sale_detail_service (id_sale, id_service, quantity, unit_price)
            VALUES ($1, $2, $3, $4)`,
           [saleId, item.id_service, item.quantity, item.unit_price]
         );
@@ -68,11 +68,11 @@ export const deleteSale = async (id: number) => {
   try {
     await client.query("BEGIN");
     await client.query(
-      `DELETE FROM SaleDetailProduct WHERE id_sale = $1`,
+      `DELETE FROM sale_detail_product WHERE id_sale = $1`,
       [id]
     );
     await client.query(
-      `DELETE FROM Sale WHERE id_sale = $1`,
+      `DELETE FROM sale WHERE id_sale = $1`,
       [id]
     );
     await client.query("COMMIT");
@@ -87,9 +87,9 @@ export const deleteSale = async (id: number) => {
 export const getSales = async () => {
   const res = await pool.query<SaleRow>(
     `SELECT s.id_sale, s.date, s.total, u.name AS user_name, e.name AS employee_name, s.created_at
-      FROM Sale s
-      JOIN "User" u ON s.id_user = u.id_user
-      JOIN "User" e ON s.id_employee = e.id_user
+      FROM sale s
+      JOIN user_account u ON s.id_user = u.id_user
+      JOIN user_account e ON s.id_employee = e.id_user
       WHERE s.deleted_at IS NULL
       ORDER BY s.created_at DESC`
   );
@@ -99,9 +99,9 @@ export const getSales = async () => {
 export const getSaleById = async (id: number) => {
   const saleResult = await pool.query<SaleRow>(
     `SELECT s.id_sale, s.date, s.total, u.name AS user_name, e.name AS employee_name
-     FROM Sale s
-     JOIN "User" u ON s.id_user = u.id_user
-     JOIN "User" e ON s.id_employee = e.id_user
+     FROM sale s
+     JOIN user_account u ON s.id_user = u.id_user
+     JOIN user_account e ON s.id_employee = e.id_user
      WHERE s.id_sale = $1 AND s.deleted_at IS NULL`,
     [id]
   );
@@ -112,16 +112,16 @@ export const getSaleById = async (id: number) => {
 
   const productsResult = await pool.query<SaleDetailProduct>( 
     `SELECT sd.id_sale, sd.id_product, sd.quantity, sd.unit_price, p.name AS product_name
-     FROM SaleDetailProduct sd
-     JOIN Product p ON sd.id_product = p.id_product
+     FROM sale_detail_product sd
+     JOIN product p ON sd.id_product = p.id_product
      WHERE sd.id_sale = $1`,
     [id]
   );
 
   const servicesResult = await pool.query(
     `SELECT sd.id_sale, sd.id_service, sd.quantity, sd.unit_price, s.name AS service_name
-     FROM SaleDetailService sd
-     JOIN Service s ON sd.id_service = s.id_service
+     FROM sale_detail_service sd
+     JOIN service s ON sd.id_service = s.id_service
      WHERE sd.id_sale = $1`,
     [id]
   );
@@ -134,8 +134,8 @@ export const getSaleById = async (id: number) => {
 export const getSalesByUserId = async (userId: number) => {
   const salesResult = await pool.query<SaleRow>(
     `SELECT s.id_sale, s.date, s.total, e.name AS employee_name
-      FROM Sale s
-      JOIN "User" e ON s.id_employee = e.id_user
+      FROM sale s
+      JOIN user_account e ON s.id_employee = e.id_user
       WHERE s.id_user = $1 AND s.deleted_at IS NULL`,
     [userId]
   );  
@@ -143,8 +143,8 @@ export const getSalesByUserId = async (userId: number) => {
   for (const sale of sales) {
     const productsResult = await pool.query<SaleDetailProduct>(
       `SELECT sd.id_sale, sd.id_product, sd.quantity, sd.unit_price, p.name AS product_name
-       FROM SaleDetailProduct sd
-        JOIN Product p ON sd.id_product = p.id_product
+       FROM sale_detail_product sd
+        JOIN product p ON sd.id_product = p.id_product
         WHERE sd.id_sale = $1`,
       [sale.id_sale]
     );
@@ -154,7 +154,7 @@ export const getSalesByUserId = async (userId: number) => {
 };
 export const softDeleteSale = async (id: number) => {
   return await pool.query(
-    `UPDATE Sale
+    `UPDATE sale
       SET deleted_at = NOW()
       WHERE id_sale = $1`,
     [id]
@@ -163,7 +163,7 @@ export const softDeleteSale = async (id: number) => {
 
 export const restoreSale = async (id: number) => {
   return await pool.query(
-    `UPDATE Sale
+    `UPDATE sale
       SET deleted_at = NULL
       WHERE id_sale = $1`,
     [id]
@@ -175,18 +175,18 @@ export const updateSale = async (id: number, sale: SaleInput) => {
   try {
     await client.query("BEGIN");
     await client.query(
-      `UPDATE Sale
+      `UPDATE sale
        SET date = $1, total = $2, id_user = $3, id_employee = $4
        WHERE id_sale = $5 AND deleted_at IS NULL`,
       [date, total, id_user, id_employee, id]
     ); 
     await client.query(
-      `DELETE FROM SaleDetailProduct WHERE id_sale = $1`,
+      `DELETE FROM sale_detail_product WHERE id_sale = $1`,
       [id] 
     );
     for (const item of products) {
       await client.query(
-        `INSERT INTO SaleDetailProduct (id_sale, id_product, quantity, unit_price)
+        `INSERT INTO sale_detail_product (id_sale, id_product, quantity, unit_price)
          VALUES ($1, $2, $3, $4)`,
         [id, item.id_product, item.quantity, item.unit_price]
       );

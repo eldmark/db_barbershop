@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useReducer, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import SectionHeader from "../../components/common/SectionHeader";
 import DataTable from "../../components/common/DataTable";
@@ -33,6 +33,99 @@ type Sale = {
 
 type User = { id_user: number; name: string; role?: number };
 
+type CartItem = {
+  type: "product" | "service";
+  id: number;
+  name: string;
+  quantity: number;
+  unit_price: number;
+};
+
+type CartState = {
+  products: CartItem[];
+  services: CartItem[];
+};
+
+type CartAction =
+  | { type: "ADD_PRODUCT"; product: Product }
+  | { type: "ADD_SERVICE"; service: Service }
+  | { type: "REMOVE_ITEM"; itemType: "product" | "service"; index: number }
+  | { type: "CLEAR_CART" }
+  | { type: "SET_SERVICES"; services: CartItem[] };
+
+function cartReducer(state: CartState, action: CartAction): CartState {
+  switch (action.type) {
+    case "ADD_PRODUCT": {
+      const existing = state.products.find((i) => i.id === action.product.id_product);
+      if (existing) {
+        return {
+          ...state,
+          products: state.products.map((i) =>
+            i.id === action.product.id_product ? { ...i, quantity: i.quantity + 1 } : i
+          ),
+        };
+      }
+      return {
+        ...state,
+        products: [
+          ...state.products,
+          {
+            type: "product",
+            id: action.product.id_product,
+            name: action.product.name,
+            quantity: 1,
+            unit_price: action.product.price,
+          },
+        ],
+      };
+    }
+    case "ADD_SERVICE": {
+      const existing = state.services.find((i) => i.id === action.service.id_service);
+      if (existing) {
+        return {
+          ...state,
+          services: state.services.map((i) =>
+            i.id === action.service.id_service ? { ...i, quantity: i.quantity + 1 } : i
+          ),
+        };
+      }
+      return {
+        ...state,
+        services: [
+          ...state.services,
+          {
+            type: "service",
+            id: action.service.id_service,
+            name: action.service.name,
+            quantity: 1,
+            unit_price: action.service.price,
+          },
+        ],
+      };
+    }
+    case "REMOVE_ITEM":
+      if (action.itemType === "product") {
+        return { ...state, products: state.products.filter((_, i) => i !== action.index) };
+      }
+      return { ...state, services: state.services.filter((_, i) => i !== action.index) };
+    case "CLEAR_CART":
+      return { products: [], services: [] };
+    case "SET_SERVICES":
+      return { ...state, services: action.services };
+    default:
+      return state;
+  }
+}
+
+type Reservation = {
+  id_reservation: number;
+  id_user: number;
+  id_employee: number;
+  id_service: number;
+  date: string;
+  status?: string;
+};
+
 export default function SalesPage() {
   const { token } = useAuth();
   const [searchParams] = useSearchParams();
@@ -55,8 +148,7 @@ export default function SalesPage() {
     id_reservation: ""
   });
 
-  const [productsList, setProductsList] = useState<Array<{ id_product: number; name: string; quantity: number; unit_price: number }>>([]);
-  const [servicesList, setServicesList] = useState<Array<{ id_service: number; name: string; quantity: number; unit_price: number }>>([]);
+  const [cart, dispatch] = useReducer(cartReducer, { products: [], services: [] });
 
   const filteredCatalog = useMemo(() => {
     if (catalogType === "products") {
@@ -66,12 +158,13 @@ export default function SalesPage() {
   }, [allProducts, allServices, search, catalogType]);
 
   const totalAmount = useMemo(() => {
-    const pTotal = productsList.reduce((sum, p) => sum + p.quantity * p.unit_price, 0);
-    const sTotal = servicesList.reduce((sum, s) => sum + s.quantity * s.unit_price, 0);
+    const pTotal = cart.products.reduce((sum, p) => sum + p.quantity * p.unit_price, 0);
+    const sTotal = cart.services.reduce((sum, s) => sum + s.quantity * s.unit_price, 0);
     return pTotal + sTotal;
-  }, [productsList, servicesList]);
+  }, [cart]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     setError(null);
     try {
@@ -91,7 +184,7 @@ export default function SalesPage() {
 
       // If billing from a reservation
       if (resId) {
-        const res = await apiFetch<any>(`/reservations/${resId}`, { token });
+        const res = await apiFetch<Reservation | Reservation[]>(`/reservations/${resId}`, { token });
         const resData = Array.isArray(res) ? res[0] : res;
         if (resData) {
           setForm(f => ({
@@ -103,54 +196,47 @@ export default function SalesPage() {
           // Auto-add the booked service
           const bookedService = (Array.isArray(servicesData) ? servicesData : []).find(s => s.id_service === resData.id_service);
           if (bookedService) {
-            setServicesList([{ 
-              id_service: bookedService.id_service, 
-              name: bookedService.name, 
-              quantity: 1, 
-              unit_price: bookedService.price 
-            }]);
+            dispatch({
+              type: "SET_SERVICES",
+              services: [{
+                type: "service",
+                id: bookedService.id_service,
+                name: bookedService.name,
+                quantity: 1,
+                unit_price: bookedService.price
+              }]
+            });
           }
         }
       }
-    } catch (err) {
+    } catch {
       setError("Request could not be completed");
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, resId]);
 
   useEffect(() => {
-    if (!token) return;
-    void loadData();
-  }, [token, resId]);
+    const fetch = async () => {
+      await loadData();
+    };
+    void fetch();
+  }, [loadData]);
 
   const addToSale = (item: Product | Service) => {
     if ("id_product" in item) {
-      setProductsList((current) => {
-        const existing = current.find((i) => i.id_product === item.id_product);
-        if (existing) {
-          return current.map((i) => i.id_product === item.id_product ? { ...i, quantity: i.quantity + 1 } : i);
-        }
-        return [...current, { id_product: item.id_product, name: item.name, quantity: 1, unit_price: item.price }];
-      });
+      dispatch({ type: "ADD_PRODUCT", product: item });
     } else {
-      setServicesList((current) => {
-        const existing = current.find((i) => i.id_service === item.id_service);
-        if (existing) {
-          return current.map((i) => i.id_service === item.id_service ? { ...i, quantity: i.quantity + 1 } : i);
-        }
-        return [...current, { id_service: item.id_service, name: item.name, quantity: 1, unit_price: item.price }];
-      });
+      dispatch({ type: "ADD_SERVICE", service: item });
     }
   };
 
-  const removeItem = (type: "p" | "s", index: number) => {
-    if (type === "p") setProductsList(s => s.filter((_, i) => i !== index));
-    else setServicesList(s => s.filter((_, i) => i !== index));
+  const removeItem = (type: "product" | "service", index: number) => {
+    dispatch({ type: "REMOVE_ITEM", itemType: type, index });
   };
 
   const handleCreate = async () => {
-    if (!form.id_user || !form.id_employee || (productsList.length === 0 && servicesList.length === 0)) {
+    if (!form.id_user || !form.id_employee || (cart.products.length === 0 && cart.services.length === 0)) {
       setError("Missing required information");
       return;
     }
@@ -165,15 +251,14 @@ export default function SalesPage() {
           id_user: Number(form.id_user),
           id_employee: Number(form.id_employee),
           id_reservation: form.id_reservation ? Number(form.id_reservation) : undefined,
-          products: productsList.map(({ id_product, quantity, unit_price }) => ({ id_product, quantity, unit_price })),
-          services: servicesList.map(({ id_service, quantity, unit_price }) => ({ id_service, quantity, unit_price }))
+          products: cart.products.map(({ id, quantity, unit_price }) => ({ id_product: id, quantity, unit_price })),
+          services: cart.services.map(({ id, quantity, unit_price }) => ({ id_service: id, quantity, unit_price }))
         })
       });
-      setProductsList([]);
-      setServicesList([]);
+      dispatch({ type: "CLEAR_CART" });
       setForm({ ...form, id_user: "", id_employee: "", id_reservation: "" });
       await loadData();
-    } catch (err) {
+    } catch {
       setError("Request could not be completed");
     }
   };
@@ -220,8 +305,8 @@ export default function SalesPage() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4 max-h-[500px] overflow-auto pr-2">
-              {filteredCatalog.map((item: any) => (
-                <div key={item.id_product || item.id_service} className="panel-solid p-4 flex flex-col justify-between border border-transparent hover:border-primary/30 transition-all">
+              {filteredCatalog.map((item: Product | Service) => (
+                <div key={"id_product" in item ? item.id_product : item.id_service} className="panel-solid p-4 flex flex-col justify-between border border-transparent hover:border-primary/30 transition-all">
                   <div>
                     <h4 className="font-semibold">{item.name}</h4>
                     <p className="text-sm text-content/70">${Number(item.price).toFixed(2)}</p>
@@ -249,7 +334,7 @@ export default function SalesPage() {
                 { key: "employee", label: "Employee" },
                 { key: "total", label: "Total", align: "right" }
               ]}
-              rows={rows as any}
+              rows={rows}
             />
           </div>
         </div>
@@ -276,28 +361,28 @@ export default function SalesPage() {
             <div className="border-t border-surfaceAlt/50 pt-4 mt-2">
               <h4 className="text-xs font-bold mb-3 uppercase tracking-widest text-content/40">Checkout Summary</h4>
               <div className="grid gap-3 max-h-60 overflow-auto pr-2">
-                {[...servicesList, ...productsList].length === 0 ? (
+                {[...cart.services, ...cart.products].length === 0 ? (
                   <p className="text-sm text-content/50 italic">Cart is empty.</p>
                 ) : (
                   <>
-                    {servicesList.map((s, i) => (
+                    {cart.services.map((s, i) => (
                       <div key={`s-${i}`} className="flex items-center justify-between gap-2 py-2 border-b border-surfaceAlt/30 last:border-0">
                         <div className="flex-1">
                           <div className="text-sm font-semibold">{s.name} <span className="text-[10px] text-primary ml-1 font-normal opacity-70">Service</span></div>
                           <div className="text-xs text-content/70">${Number(s.unit_price).toFixed(2)}</div>
                         </div>
-                        <button className="text-accent/60 hover:text-accent" onClick={() => removeItem("s", i)}>
+                        <button className="text-accent/60 hover:text-accent" onClick={() => removeItem("service", i)}>
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ))}
-                    {productsList.map((p, i) => (
+                    {cart.products.map((p, i) => (
                       <div key={`p-${i}`} className="flex items-center justify-between gap-2 py-2 border-b border-surfaceAlt/30 last:border-0">
                         <div className="flex-1">
                           <div className="text-sm font-semibold">{p.name} <span className="text-[10px] text-accent ml-1 font-normal opacity-70">Product</span></div>
                           <div className="text-xs text-content/70">{p.quantity} × ${Number(p.unit_price).toFixed(2)}</div>
                         </div>
-                        <button className="text-accent/60 hover:text-accent" onClick={() => removeItem("p", i)}>
+                        <button className="text-accent/60 hover:text-accent" onClick={() => removeItem("product", i)}>
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
@@ -314,7 +399,7 @@ export default function SalesPage() {
 
             {error && <p className="text-xs text-accent font-medium">{error}</p>}
             
-            <Button variant="success" className="w-full mt-2" onClick={handleCreate} disabled={productsList.length === 0 && servicesList.length === 0}>
+            <Button variant="success" className="w-full mt-2" onClick={handleCreate} disabled={cart.products.length === 0 && cart.services.length === 0}>
               Finalize & Print Ticket
             </Button>
           </div>

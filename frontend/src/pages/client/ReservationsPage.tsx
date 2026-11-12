@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Button from "../../components/common/Button";
 import { apiFetch } from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
@@ -13,7 +13,7 @@ type Reservation = {
   id_service: number;
 };
 
-type ServiceEntity = { id_service?: number; name: string; price: number };
+type ServiceEntity = { id_service?: number; name: string; price: number | string };
 type User = { id_user: number; name: string; role?: number };
 
 export default function ReservationsPage() {
@@ -34,7 +34,7 @@ export default function ReservationsPage() {
     [items, user]
   );
 
-  const loadReservations = async () => {
+  const loadReservations = useCallback(async () => {
     setError(null);
     try {
       const [resData, svcData, usersData] = await Promise.all([
@@ -46,16 +46,20 @@ export default function ReservationsPage() {
       setServices(Array.isArray(svcData) ? svcData : []);
       // Filter to only employees (role === 2)
       const allUsers = Array.isArray(usersData) ? usersData : [];
-      const onlyEmployees = allUsers.filter((u: any) => (u.role ?? 0) === 2);
+      const onlyEmployees = allUsers.filter((u: User) => (u.role ?? 0) === 2);
       setEmployees(onlyEmployees);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load reservations");
     }
-  };
+  }, [token]);
 
   useEffect(() => {
-    void loadReservations();
-  }, []);
+    const fetch = async () => {
+      await Promise.resolve();
+      void loadReservations();
+    };
+    void fetch();
+  }, [loadReservations]);
 
   const handleCreate = async () => {
     if (!user || !form.date || !form.time || !form.id_service) {
@@ -122,7 +126,7 @@ export default function ReservationsPage() {
             >
               <option value="">Select a service</option>
               {services.map((s) => {
-                const priceNum = typeof s.price === "number" ? s.price : Number((s as any).price);
+                const priceNum = typeof s.price === "number" ? s.price : Number(s.price);
                 const priceLabel = Number.isNaN(priceNum) ? "$0" : `$${priceNum.toFixed(2)}`;
                 return (
                   <option key={s.id_service} value={s.id_service}>

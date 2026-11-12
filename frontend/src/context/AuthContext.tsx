@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { apiFetch } from "../services/api";
 
 type AuthUser = {
@@ -32,28 +32,24 @@ type StoredAuth = {
   user: AuthUser;
 };
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+const getStoredAuth = (): StoredAuth | null => {
+  const rawLocal = localStorage.getItem(STORAGE_KEY);
+  const rawSession = sessionStorage.getItem(STORAGE_KEY);
+  const raw = rawLocal ?? rawSession;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as StoredAuth;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+};
 
-  useEffect(() => {
-    // Try localStorage first (remembered), then sessionStorage (non-remembered)
-    const rawLocal = localStorage.getItem(STORAGE_KEY);
-    const rawSession = sessionStorage.getItem(STORAGE_KEY);
-    const raw = rawLocal ?? rawSession;
-    if (raw) {
-      try {
-        const stored = JSON.parse(raw) as StoredAuth;
-        setUser(stored.user);
-        setToken(stored.token);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-        sessionStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    setLoading(false);
-  }, []);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredAuth()?.user ?? null);
+  const [token, setToken] = useState<string | null>(() => getStoredAuth()?.token ?? null);
+  const [loading] = useState(false);
 
   const login = useCallback(async (email: string, password: string, remember = true) => {
     const data = await apiFetch<LoginResponse>("/auth/login", {
@@ -94,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuthContext() {
   const context = useContext(AuthContext);
   if (!context) {

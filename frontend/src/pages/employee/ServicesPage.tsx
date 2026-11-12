@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import SectionHeader from "../../components/common/SectionHeader";
 import DataTable from "../../components/common/DataTable";
 import Button from "../../components/common/Button";
@@ -9,7 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 type ServiceEntity = {
   id_service?: number;
   name: string;
-  price: number;
+  price: number | string;
 };
 
 export default function ServicesPage() {
@@ -27,7 +27,7 @@ export default function ServicesPage() {
         id: item.id_service ?? 0,
         name: item.name,
         price: (() => {
-          const n = typeof item.price === "number" ? item.price : Number((item as any).price);
+          const n = typeof item.price === "number" ? item.price : Number(item.price);
           if (Number.isNaN(n)) return "$0.00";
           return `$${n.toFixed(2)}`;
         })()
@@ -35,7 +35,7 @@ export default function ServicesPage() {
     [items]
   );
 
-  const loadServices = async () => {
+  const loadServices = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -46,11 +46,15 @@ export default function ServicesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
-    void loadServices();
-  }, []);
+    const fetch = async () => {
+      await Promise.resolve();
+      void loadServices();
+    };
+    void fetch();
+  }, [loadServices]);
 
   const handleCreate = async () => {
     setError(null);
