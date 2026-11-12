@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../services/api";
 
 type AuthUser = {
@@ -9,7 +9,6 @@ type AuthUser = {
 };
 
 type LoginResponse = {
-  token: string;
   user: AuthUser;
 };
 
@@ -17,7 +16,6 @@ type AuthContextValue = {
   user: AuthUser | null;
   token: string | null;
   loading: boolean;
-  // remember: when true persist to localStorage, otherwise use sessionStorage
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
   logout: () => void;
   hasRole: (roles: string[]) => boolean;
@@ -25,59 +23,76 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = "barber.auth";
+const SESSION_TOKEN = "session";
 
-type StoredAuth = {
-  token: string;
+type SessionResponse = {
   user: AuthUser;
 };
 
-const getStoredAuth = (): StoredAuth | null => {
-  const rawLocal = localStorage.getItem(STORAGE_KEY);
-  const rawSession = sessionStorage.getItem(STORAGE_KEY);
-  const raw = rawLocal ?? rawSession;
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as StoredAuth;
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(STORAGE_KEY);
-    return null;
-  }
+const roleAliases: Record<string, string> = {
+  admin: "admin_role",
+  manager: "manager_role",
+  employee: "employee_role",
+  cashier: "cashier_role",
+  client: "client_role"
 };
 
+const normalizeRole = (role: string) => roleAliases[role] ?? role;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => getStoredAuth()?.user ?? null);
-  const [token, setToken] = useState<string | null>(() => getStoredAuth()?.token ?? null);
-  const [loading] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    apiFetch<SessionResponse>("/auth/session")
+      .then((data) => {
+        if (!active) return;
+        setUser(data.user);
+        setToken(SESSION_TOKEN);
+      })
+      .catch(() => {
+        if (!active) return;
+        setUser(null);
+        setToken(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const login = useCallback(async (email: string, password: string, remember = true) => {
+    void remember;
     const data = await apiFetch<LoginResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password })
     });
 
-    if (!data?.token || !data.user) {
+    if (!data?.user) {
       throw new Error("Invalid credentials");
     }
 
     setUser(data.user);
-    setToken(data.token);
-    const storage = remember ? localStorage : sessionStorage;
-    storage.setItem(STORAGE_KEY, JSON.stringify(data));
+    setToken(SESSION_TOKEN);
   }, []);
 
   const logout = useCallback(() => {
+    void apiFetch("/auth/logout", { method: "POST" }).catch(() => undefined);
     setUser(null);
     setToken(null);
-    localStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const hasRole = useCallback(
     (roles: string[]) => {
       if (!user) return false;
-      return roles.some((role) => user.roles.includes(role));
+      const userRoles = new Set(user.roles.flatMap((role) => [role, normalizeRole(role)]));
+      return roles.some((role) => userRoles.has(normalizeRole(role)));
     },
     [user]
   );

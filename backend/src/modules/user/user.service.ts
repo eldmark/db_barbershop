@@ -24,8 +24,8 @@ export const createUser = async (name: string, email: string, password: string) 
     );
 
     const user = res.rows[0];
-    // assign default role 'client'
-    const roleRes = await pool.query(`SELECT id_role FROM role WHERE name = $1 LIMIT 1`, ["client"]);
+    // assign default role 'client_role'
+    const roleRes = await pool.query(`SELECT id_role FROM role WHERE name = $1 LIMIT 1`, ["client_role"]);
     const roleId = roleRes.rows[0]?.id_role;
     if (roleId) {
       await pool.query(`INSERT INTO user_role (id_user, id_role) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [user.id_user, roleId]);

@@ -2,9 +2,29 @@
 -- USER & AUTHORIZATION
 -- =========================
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'admin_role') THEN
+    CREATE ROLE admin_role;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'manager_role') THEN
+    CREATE ROLE manager_role;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'employee_role') THEN
+    CREATE ROLE employee_role;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cashier_role') THEN
+    CREATE ROLE cashier_role;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'client_role') THEN
+    CREATE ROLE client_role;
+  END IF;
+END
+$$;
+
 CREATE TABLE role (
   id_role SERIAL PRIMARY KEY,
-  name VARCHAR(50) NOT NULL
+  name VARCHAR(50) UNIQUE NOT NULL
 );
 
 CREATE TABLE user_account (
@@ -17,9 +37,17 @@ CREATE TABLE user_account (
   deleted_at TIMESTAMP
 );
 
+CREATE TABLE app_session (
+  id UUID PRIMARY KEY,
+  id_user INT NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (id_user) REFERENCES user_account(id_user) ON DELETE CASCADE
+);
+
 CREATE TABLE permission (
     id_permission SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
+    name VARCHAR(100) UNIQUE NOT NULL
 );
 
 CREATE TABLE user_role (
@@ -175,6 +203,119 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE PROCEDURE sp_complete_reservation(IN p_id_reservation INT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE reservation
+    SET status = 'completed', updated_at = NOW()
+    WHERE id_reservation = p_id_reservation
+      AND deleted_at IS NULL;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_cancel_reservation(IN p_id_reservation INT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE reservation
+    SET status = 'cancelled', updated_at = NOW()
+    WHERE id_reservation = p_id_reservation
+      AND deleted_at IS NULL;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_restock_product(
+    IN p_id_product INT,
+    IN p_quantity INT,
+    OUT p_new_stock INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF p_quantity <= 0 THEN
+        RAISE EXCEPTION 'Quantity must be positive';
+    END IF;
+
+    UPDATE product
+    SET stock = stock + p_quantity
+    WHERE id_product = p_id_product
+    RETURNING stock INTO p_new_stock;
+
+    IF p_new_stock IS NULL THEN
+        RAISE EXCEPTION 'Product not found';
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_generate_invoice(
+    IN p_id_sale INT,
+    OUT p_total NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    SELECT COALESCE(SUM(line_total), 0)
+    INTO p_total
+    FROM (
+        SELECT quantity * unit_price AS line_total
+        FROM sale_detail_product
+        WHERE id_sale = p_id_sale
+        UNION ALL
+        SELECT quantity * unit_price AS line_total
+        FROM sale_detail_service
+        WHERE id_sale = p_id_sale
+    ) invoice_lines;
+
+    UPDATE sale
+    SET total = p_total, updated_at = NOW()
+    WHERE id_sale = p_id_sale;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE sp_create_sale(
+    IN p_id_user INT,
+    IN p_id_employee INT,
+    IN p_id_product INT,
+    IN p_quantity INT,
+    IN p_unit_price NUMERIC,
+    OUT p_result TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_stock INT;
+    v_sale_id INT;
+BEGIN
+    SELECT stock
+    INTO v_stock
+    FROM product
+    WHERE id_product = p_id_product;
+
+    IF v_stock IS NULL THEN
+        RAISE EXCEPTION 'Product not found';
+    END IF;
+
+    IF v_stock < p_quantity THEN
+        RAISE EXCEPTION 'Insufficient stock';
+    END IF;
+
+    INSERT INTO sale(date, total, id_user, id_employee)
+    VALUES(CURRENT_DATE, p_quantity * p_unit_price, p_id_user, p_id_employee)
+    RETURNING id_sale INTO v_sale_id;
+
+    INSERT INTO sale_detail_product(id_sale, id_product, quantity, unit_price)
+    VALUES(v_sale_id, p_id_product, p_quantity, p_unit_price);
+
+    p_result := 'SUCCESS';
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        p_result := SQLERRM;
+END;
+$$;
+
 -- =========================
 -- INDEXES
 -- =========================
@@ -197,7 +338,7 @@ CREATE VIEW active_reservations AS SELECT * FROM reservation WHERE deleted_at IS
 
 -- 1. role (25 records)
 INSERT INTO role (name) VALUES 
-('admin'), ('employee'), ('client'), ('manager'), ('receptionist'), 
+('admin_role'), ('manager_role'), ('employee_role'), ('cashier_role'), ('client_role'), 
 ('barber_senior'), ('barber_junior'), ('stylist'), ('colorist'), ('trainee'),
 ('marketing'), ('accounting'), ('inventory_manager'), ('security'), ('cleaning'),
 ('it_support'), ('hr'), ('sales_lead'), ('customer_success'), ('logistics'),
@@ -211,39 +352,39 @@ INSERT INTO permission (name) VALUES
 ('view_categories'), ('edit_categories'), ('apply_discounts'), ('void_sales'), ('manage_roles'),
 ('assign_permissions'), ('view_audit_log'), ('manage_it'), ('hr_access'), ('view_finances');
 
--- 3. user_account (25 records) - passwords are 'password123'
+-- 3. user_account (25 records) - passwords are bcrypt hashes for 'password123'
 INSERT INTO user_account (name, email, password) VALUES 
-('Marco Admin', 'admin@example.com', '$2b$10$T8Z.nL3oM1o/M.o/M.o/M.p0R0R0R0R0R0R0R0R0R0R0R0R0R0R'),
-('John Barber', 'john.barber@example.com', 'password123'),
-('Jane Stylist', 'jane.stylist@example.com', 'password123'),
-('Mike Fade', 'mike.fade@example.com', 'password123'),
-('Sarah Color', 'sarah.color@example.com', 'password123'),
-('Alice Client', 'client@example.com', 'password123'),
-('Bob Smith', 'bob@example.com', 'password123'),
-('Charlie Brown', 'charlie@example.com', 'password123'),
-('David Jones', 'david@example.com', 'password123'),
-('Eve Wilson', 'eve@example.com', 'password123'),
-('Frank Miller', 'frank@example.com', 'password123'),
-('Grace Lee', 'grace@example.com', 'password123'),
-('Heidi Chen', 'heidi@example.com', 'password123'),
-('Ivan Garcia', 'ivan@example.com', 'password123'),
-('Judy Davis', 'judy@example.com', 'password123'),
-('Kevin White', 'kevin@example.com', 'password123'),
-('Laura Moore', 'laura@example.com', 'password123'),
-('Mark Taylor', 'mark@example.com', 'password123'),
-('Nancy Hill', 'nancy@example.com', 'password123'),
-('Oscar Scott', 'oscar@example.com', 'password123'),
-('Paul Green', 'paul@example.com', 'password123'),
-('Quinn Adams', 'quinn@example.com', 'password123'),
-('Rose Baker', 'rose@example.com', 'password123'),
-('Steve Cook', 'steve@example.com', 'password123'),
-('Tina Bell', 'tina@example.com', 'password123');
+('Admin User', 'admin@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Manager User', 'manager@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Employee User', 'employee@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Cashier User', 'cashier@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Client User', 'client@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Bob Smith', 'bob@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Charlie Brown', 'charlie@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('David Jones', 'david@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Eve Wilson', 'eve@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Frank Miller', 'frank@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Grace Lee', 'grace@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Heidi Chen', 'heidi@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Ivan Garcia', 'ivan@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Judy Davis', 'judy@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Kevin White', 'kevin@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Laura Moore', 'laura@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Mark Taylor', 'mark@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Nancy Hill', 'nancy@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Oscar Scott', 'oscar@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Paul Green', 'paul@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Quinn Adams', 'quinn@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Rose Baker', 'rose@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Steve Cook', 'steve@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Tina Bell', 'tina@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi'),
+('Avery Client', 'avery@example.com', '$2b$10$4vEqTgR8rmI/wgtlYk7Rc.q1.NfTgPeypC2DoQaimr0jFNGiTrzVi');
 
 -- 4. user_role (25 records)
 INSERT INTO user_role (id_user, id_role) VALUES 
-(1,1), (2,2), (3,2), (4,2), (5,2), (6,3), (7,3), (8,3), (9,3), (10,3),
-(11,3), (12,3), (13,3), (14,3), (15,3), (16,3), (17,3), (18,3), (19,3), (20,3),
-(21,3), (22,3), (23,3), (24,3), (25,3);
+(1,1), (2,2), (3,3), (4,4), (5,5), (6,5), (7,5), (8,5), (9,5), (10,5),
+(11,5), (12,5), (13,5), (14,5), (15,5), (16,5), (17,5), (18,5), (19,5), (20,5),
+(21,5), (22,5), (23,5), (24,5), (25,5);
 
 -- 5. role_permission (25 records)
 INSERT INTO role_permission (id_role, id_permission) VALUES 
@@ -324,3 +465,39 @@ INSERT INTO sale_detail_service (id_sale, id_service, quantity, unit_price) VALU
 (11, 11, 1, 20.00), (12, 12, 1, 15.00), (13, 13, 1, 10.00), (14, 14, 1, 8.00), (15, 15, 1, 7.00),
 (16, 16, 1, 7.00), (17, 17, 1, 35.00), (18, 18, 1, 60.00), (19, 19, 1, 55.00), (20, 20, 1, 18.00),
 (21, 21, 1, 15.00), (22, 22, 1, 25.00), (23, 23, 1, 12.00), (24, 24, 1, 10.00), (25, 25, 1, 100.00);
+
+-- =========================
+-- DATABASE ROLE PERMISSIONS
+-- =========================
+
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
+REVOKE EXECUTE ON ALL ROUTINES IN SCHEMA public FROM PUBLIC;
+
+GRANT USAGE ON SCHEMA public TO admin_role, manager_role, employee_role, cashier_role, client_role;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin_role;
+GRANT EXECUTE ON ALL ROUTINES IN SCHEMA public TO admin_role;
+
+GRANT SELECT ON product, category, supplier, service, active_sales, active_reservations TO manager_role;
+GRANT UPDATE (stock) ON product TO manager_role;
+GRANT EXECUTE ON PROCEDURE sp_restock_product(INT, INT) TO manager_role;
+GRANT EXECUTE ON PROCEDURE sp_generate_invoice(INT) TO manager_role;
+
+GRANT SELECT ON product, service, user_account TO employee_role;
+GRANT SELECT, INSERT, UPDATE ON reservation TO employee_role;
+GRANT SELECT, INSERT ON sale, sale_detail_product, sale_detail_service TO employee_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO employee_role;
+GRANT EXECUTE ON PROCEDURE sp_complete_reservation(INT) TO employee_role;
+GRANT EXECUTE ON PROCEDURE sp_cancel_reservation(INT) TO employee_role;
+
+GRANT SELECT ON reservation, product, service TO cashier_role;
+GRANT SELECT, INSERT ON sale, sale_detail_product, sale_detail_service TO cashier_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO cashier_role;
+GRANT EXECUTE ON PROCEDURE sp_create_sale(INT, INT, INT, INT, NUMERIC) TO cashier_role;
+GRANT EXECUTE ON PROCEDURE sp_generate_invoice(INT) TO cashier_role;
+
+GRANT SELECT ON service TO client_role;
+GRANT SELECT, INSERT ON reservation TO client_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO client_role;

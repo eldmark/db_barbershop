@@ -18,6 +18,9 @@ import ClientShell from "../components/layout/ClientShell";
 import { useAuth } from "../hooks/useAuth";
 import type { JSX } from "react";
 
+const staffRoles = ["admin_role", "manager_role", "employee_role", "cashier_role", "admin", "employee"];
+const clientRoles = ["client_role", "client"];
+
 function RequireAuth({ children }: { children: JSX.Element }) {
   const { token, loading } = useAuth();
   if (loading) return <div className="app-container">Loading...</div>;
@@ -33,14 +36,14 @@ function RequireRole({ allow, children }: { allow: string[]; children: JSX.Eleme
 
 function ServicesRoute() {
   const { hasRole } = useAuth();
-  if (hasRole(["admin", "employee"])) {
+  if (hasRole(staffRoles)) {
     return (
       <AppShell>
         <ServicesPage />
       </AppShell>
     );
   }
-  if (hasRole(["client"])) {
+  if (hasRole(clientRoles)) {
     return (
       <ClientShell>
         <ClientServicesPage />
@@ -52,14 +55,14 @@ function ServicesRoute() {
 
 function ReservationsRoute() {
   const { hasRole } = useAuth();
-  if (hasRole(["admin", "employee"])) {
+  if (hasRole(staffRoles)) {
     return (
       <AppShell>
         <ReservationsPage />
       </AppShell>
     );
   }
-  if (hasRole(["client"])) {
+  if (hasRole(clientRoles)) {
     return (
       <ClientShell>
         <ClientReservationsPage />
@@ -79,7 +82,7 @@ export default function AppRouter() {
           path="/"
           element={
             token && user
-              ? user.roles.some((role) => ["admin", "employee"].includes(role))
+              ? user.roles.some((role) => staffRoles.includes(role))
                 ? <Navigate to="/dashboard" replace />
                 : <Navigate to="/home" replace />
               : <Navigate to="/login" replace />
@@ -93,7 +96,7 @@ export default function AppRouter() {
           path="/dashboard"
           element={
             <RequireAuth>
-              <RequireRole allow={["admin", "employee"]}>
+              <RequireRole allow={staffRoles}>
                 <AppShell>
                   <DashboardPage />
                 </AppShell>
@@ -105,7 +108,7 @@ export default function AppRouter() {
           path="/products"
           element={
             <RequireAuth>
-              <RequireRole allow={["admin", "employee"]}>
+              <RequireRole allow={staffRoles}>
                 <AppShell>
                   <ProductsPage />
                 </AppShell>
@@ -117,7 +120,7 @@ export default function AppRouter() {
           path="/products/:id"
           element={
             <RequireAuth>
-              <RequireRole allow={["admin", "employee"]}>
+              <RequireRole allow={staffRoles}>
                 <AppShell>
                   <ProductEditPage />
                 </AppShell>
@@ -129,7 +132,7 @@ export default function AppRouter() {
           path="/sales"
           element={
             <RequireAuth>
-              <RequireRole allow={["admin", "employee"]}>
+              <RequireRole allow={staffRoles}>
                 <AppShell>
                   <SalesPage />
                 </AppShell>
@@ -158,7 +161,7 @@ export default function AppRouter() {
           path="/reservations/:id"
           element={
             <RequireAuth>
-              <RequireRole allow={["admin", "employee"]}>
+              <RequireRole allow={staffRoles}>
                 <AppShell>
                   <ReservationEditPage />
                 </AppShell>
@@ -171,7 +174,7 @@ export default function AppRouter() {
           path="/home"
           element={
             <RequireAuth>
-              <RequireRole allow={["client"]}>
+              <RequireRole allow={clientRoles}>
                 <ClientShell>
                   <HomePage />
                 </ClientShell>
